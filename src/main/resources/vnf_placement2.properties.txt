@@ -10,8 +10,8 @@ vnf.deploy = 20::30::25::10::50
 #Requerimiento de CPU de cada VNF (Cantidad de Cores) !!cite 187
 vnf.resource.cpu = 4::2::1::1::2
 
-#Requerimiento de RAM de cada VNF (En GB)  #no encontré
-vnf.resource.ram = 2::1::2::2::1
+#Requerimiento de RAM de cada VNF (En GB)  !!cite 187
+vnf.resource.ram = 4::8::4::2::1
 
 #Requerimiento de almacenamiento de cada VNF (En GB)
 vnf.resource.storage = 6::9::8::7::10
@@ -40,7 +40,7 @@ server.energy.cost = 0.1::0.2::0.25::0.70
 server.resource.cpu = 16::8::16::32
 
 #Capacidad de RAM por Servidor (En GB)
-server.resource.ram = 87::90::96::94
+server.resource.ram = 32::64::38::32
 
 #Capacidad de almacenamiento por Servidor (En GB)
 server.resource.storage = 2048::1000::1024::1500
@@ -55,10 +55,10 @@ server.resource.ram.cost = 3::2::1.5::2
 server.resource.storage.cost = 2.7::2.5::3::2
 
 #Consumo de Energia en Watts al activar el Servidor
-server.energy.per.core.watts = 80::85::70::75
+server.energy.per.core.watts = 100::185::90::1500
 
-#Capacidad maxima de Energia en Watts
-server.energy.peak.watts = 3735::4000::3500::3900
+#Capacidad maxima de Energia en Watts   !!! cite 187
+server.energy.peak.watts = 2735::3000::3500::2900
 
 #Costo en dolares por CPU (Para la fragementacion)
 server.penalty.cpu.cost = 0.01
