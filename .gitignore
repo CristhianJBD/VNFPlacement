@@ -1,0 +1,25 @@
+/target/*
+/test-output/*
+/jboss.server.log.dir_IS_UNDEFINED/*
+*.class
+*.war
+/tmp/*
+**/target
+.idea/
+/.gitmodules
+.tern-project
+**/.classpath
+.classpath
+# Ignora los sub directorios de eclipse
+**/.project
+**/.settings
+**/build/
+**/.metadata/
+**/bin/
+*.iml
+**/configFile.txt
+**/bootCounterFile.txt
+**/.recommenders/
+**/Logs/*
+.vscode/
+**/.factorypath
