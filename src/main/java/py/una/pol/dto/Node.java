@@ -12,7 +12,7 @@ public class Node {
     private Server server;
 
     //Costo en dolares por utilizar la Energia del Nodo
-    private Long energyCost;
+    private Integer energyCost;
 
     @Override
     public String toString() {

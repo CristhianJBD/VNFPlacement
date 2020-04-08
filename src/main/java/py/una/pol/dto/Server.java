@@ -2,6 +2,8 @@ package py.una.pol.dto;
 
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 public class Server {
 
@@ -9,7 +11,7 @@ public class Server {
     private String id;
 
     //Vnf que es instalado en el Servidor
-    private Vnf vnf;
+    private List<Vnf> vnf;
 
     //Costo de licencia del Servidor
     private Integer licenceCost;
@@ -27,7 +29,7 @@ public class Server {
     private Integer resourceStorage;
 
     //Consumo de Energia en Watts al activar el Servidor
-    private Integer energyIdleWatts;
+    private Integer energyPerCoreWatts;
 
     //Capacidad maxima de Energia en Watts del Servidor
     private Integer energyPeakWatts;
@@ -48,13 +50,12 @@ public class Server {
     public String toString() {
         final StringBuilder sb = new StringBuilder("Server: ");
         sb.append("id='").append(id).append('\'');
-        sb.append(", vnf=").append(vnf!=null?vnf.getId():null);
         sb.append(", licenceCost=").append(licenceCost);
         sb.append(", energyCost=").append(energyCost);
         sb.append(", resourceCPU=").append(resourceCPU);
         sb.append(", resourceRAM=").append(resourceRAM);
         sb.append(", resourceStorage=").append(resourceStorage);
-        sb.append(", energyIdleWatts=").append(energyIdleWatts);
+        sb.append(", energyIdleWatts=").append(energyPerCoreWatts);
         sb.append(", resourseUsedRAM=").append(resourseUsedRAM);
         sb.append(", resourseUsedStorage=").append(resourseUsedStorage);
         sb.append(", resourceUsedCPU=").append(resourceUsedCPU);

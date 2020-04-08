@@ -3,7 +3,7 @@ package py.una.pol.dto;
 import lombok.Data;
 
 @Data
-public class Trafic {
+public class Traffic {
 
     //Nodo origen
     private Node nodeOrigin;
@@ -25,7 +25,7 @@ public class Trafic {
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("Trafic: ");
+        final StringBuilder sb = new StringBuilder("Traffic: ");
         sb.append("nodeOrigin=").append(nodeOrigin);
         sb.append(", nodeDestiny=").append(nodeDestiny);
         sb.append(", bandwidth=").append(bandwidth);

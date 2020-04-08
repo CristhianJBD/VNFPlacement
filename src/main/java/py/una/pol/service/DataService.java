@@ -45,12 +45,12 @@ public class DataService {
             loadGraph();
 
         }catch (Exception e){
-            logger.error(e.getMessage());
+            logger.error("Error al cargar los datos: " + e.getMessage());
         }
     }
 
 
-    private void loadVnfs() {
+    private void loadVnfs() throws Exception {
         Vnf vnf;
         String separator = configuration.getSeparator();
         try {
@@ -79,14 +79,16 @@ public class DataService {
             }
 
         } catch (NumberFormatException e) {
-            logger.error("Error al parsear los datos de los VNFs");
+            logger.error("Error al parsear los datos de los VNFs: "+ e.getMessage());
+            throw new Exception();
         } catch (Exception e) {
-            logger.error("Error al cargar los datos de los VNFs");
+            logger.error("Error al cargar los datos de los VNFs:" + e.getMessage());
+            throw new Exception();
         }
     }
 
 
-    private void loadServers() {
+    private void loadServers() throws Exception {
         Server server;
         String separator = configuration.getSeparator();
         try {
@@ -96,7 +98,7 @@ public class DataService {
             String[] cpus = configuration.getServerResourceCPU().split(separator);
             String[] rams = configuration.getServerResourceRAM().split(separator);
             String[] storages = configuration.getServerResourceStorage().split(separator);
-            String[] energyIdles = configuration.getServerEnergyIdleWatts().split(separator);
+            String[] energyPerCore = configuration.getServerEnergyPerCoreWatts().split(separator);
             String[] energyPeaks = configuration.getServerEnergyPeakWatts().split(separator);
 
             for (int i = 0; i < configuration.getServerSize(); i++) {
@@ -107,7 +109,7 @@ public class DataService {
                 server.setResourceCPU(Integer.valueOf(cpus[i]));
                 server.setResourceRAM(Integer.valueOf(rams[i]));
                 server.setResourceStorage(Integer.valueOf(storages[i]));
-                server.setEnergyIdleWatts(Integer.valueOf(energyIdles[i]));
+                server.setEnergyPerCoreWatts(Integer.valueOf(energyPerCore[i]));
                 server.setEnergyPeakWatts(Integer.valueOf(energyPeaks[i]));
 
                 logger.info(server.toString());
@@ -115,14 +117,16 @@ public class DataService {
             }
 
         } catch (NumberFormatException e) {
-            logger.error("Error al parsear los datos de los Servidores");
+            logger.error("Error al parsear los datos de los Servidores: " + e.getMessage());
+            throw new Exception();
         } catch (Exception e) {
-            logger.error("Error al cargar los datos de los Servidores");
+            logger.error("Error al cargar los datos de los Servidores: " + e.getMessage());
+            throw new Exception();
         }
     }
 
 
-    private void loadNodes() {
+    private void loadNodes() throws Exception {
         Node node;
         String separator = configuration.getSeparator();
         try {
@@ -133,7 +137,7 @@ public class DataService {
             for (int i = 0; i < configuration.getNodeSize(); i++) {
                 node = new Node();
                 node.setId(ids[i]);
-                node.setEnergyCost(Long.valueOf(energyCosts[i]));
+                node.setEnergyCost(Integer.valueOf(energyCosts[i]));
                 node.setServer(getServer(nodeServer[i]));
 
                 logger.info(node.toString());
@@ -142,8 +146,10 @@ public class DataService {
 
         } catch (NumberFormatException e) {
             logger.error("Error al parsear los datos de los Nodos: " + e.getMessage());
+            throw new Exception();
         } catch (Exception e) {
             logger.error("Error al cargar los datos de los Nodos: " +  e.getMessage());
+            throw new Exception();
         }
     }
 
@@ -161,70 +167,75 @@ public class DataService {
     }
 
 
-    private void readFile() throws IOException {
-        BufferedReader reader;
-        reader = new BufferedReader(new FileReader(System.getProperty("app.home") + configuration.getMatrixName()));
+    private void readFile() throws Exception {
+        try {
+            BufferedReader reader;
+            reader = new BufferedReader(new FileReader(System.getProperty("app.home") + configuration.getMatrixName()));
 
-        int size = Integer.parseInt(reader.readLine());
-        logger.info("Cantidad de nodos: " + size);
+            int size = Integer.parseInt(reader.readLine());
+            logger.info("Cantidad de nodos: " + size);
 
-        logger.info(reader.readLine());
-        matrixNodes = new String[size][size];
-        for (int i = 0; i < size; i++) {
-            String[] line = reader.readLine().split(" ");
+            logger.info(reader.readLine());
+            matrixNodes = new String[size][size];
+            for (int i = 0; i < size; i++) {
+                String[] line = reader.readLine().split(" ");
 
-            for (int j = 0; j < size; j++) {
-                matrixNodes[i][j] = line[j];
+                for (int j = 0; j < size; j++) {
+                    matrixNodes[i][j] = line[j];
+                }
             }
-        }
-        logger.info(Arrays.deepToString(matrixNodes));
+            logger.info(Arrays.deepToString(matrixNodes));
 
-        logger.info(reader.readLine());
-        delay = new Integer[size][size];
-        for (int i = 0; i < size; i++) {
-            String[] line = reader.readLine().split(" ");
+            logger.info(reader.readLine());
+            delay = new Integer[size][size];
+            for (int i = 0; i < size; i++) {
+                String[] line = reader.readLine().split(" ");
 
-            for (int j = 0; j < size; j++) {
-                delay[i][j] = Integer.parseInt((line[j]));
+                for (int j = 0; j < size; j++) {
+                    delay[i][j] = Integer.parseInt((line[j]));
+                }
             }
-        }
-        logger.info(Arrays.deepToString(delay));
+            logger.info(Arrays.deepToString(delay));
 
-        logger.info(reader.readLine());
-        distance = new Integer[size][size];
-        for (int i = 0; i < size; i++) {
-            String[] line = reader.readLine().split(" ");
+            logger.info(reader.readLine());
+            distance = new Integer[size][size];
+            for (int i = 0; i < size; i++) {
+                String[] line = reader.readLine().split(" ");
 
-            for (int j = 0; j < size; j++) {
-                distance[i][j] = Integer.parseInt(line[j]);
+                for (int j = 0; j < size; j++) {
+                    distance[i][j] = Integer.parseInt(line[j]);
+                }
             }
-        }
-        logger.info(Arrays.deepToString(distance));
+            logger.info(Arrays.deepToString(distance));
 
-        logger.info(reader.readLine());
-        bandwidth = new Integer[size][size];
-        for (int i = 0; i < size; i++) {
-            String[] line = reader.readLine().split(" ");
+            logger.info(reader.readLine());
+            bandwidth = new Integer[size][size];
+            for (int i = 0; i < size; i++) {
+                String[] line = reader.readLine().split(" ");
 
-            for (int j = 0; j < size; j++) {
-                bandwidth[i][j] = Integer.parseInt(line[j]);
+                for (int j = 0; j < size; j++) {
+                    bandwidth[i][j] = Integer.parseInt(line[j]);
+                }
             }
-        }
-        logger.info(Arrays.deepToString(bandwidth));
+            logger.info(Arrays.deepToString(bandwidth));
 
-        logger.info(reader.readLine());
-        bandwidthCost = new Integer[size][size];
-        for (int i = 0; i < size; i++) {
-            String[] line = reader.readLine().split(" ");
+            logger.info(reader.readLine());
+            bandwidthCost = new Integer[size][size];
+            for (int i = 0; i < size; i++) {
+                String[] line = reader.readLine().split(" ");
 
-            for (int j = 0; j < size; j++) {
-                bandwidthCost[i][j] = Integer.parseInt(line[j]);
+                for (int j = 0; j < size; j++) {
+                    bandwidthCost[i][j] = Integer.parseInt(line[j]);
+                }
             }
+            logger.info(Arrays.deepToString(bandwidthCost));
+        }catch (Exception e) {
+            logger.error("Error al cargar las matrices: " + e.getMessage());
+            throw new Exception();
         }
-        logger.info(Arrays.deepToString(bandwidthCost));
     }
 
-    private void loadGraph(){
+    private void loadGraph() throws Exception {
         Link link;
         try {
             for (int i = 0; i < configuration.getNodeSize(); i++) {
@@ -235,6 +246,7 @@ public class DataService {
                 for (int j = 0; j < configuration.getNodeSize(); j++) {
                     if (!matrixNodes[i][j].equals(Constants.ZERO)) {
                         link = new Link();
+                        link.setId(nodes.get(i).getId()+"-"+nodes.get(j).getId());
                         link.setBandwidth(bandwidth[i][j]);
                         link.setBandwidthCost(bandwidthCost[i][j]);
                         link.setDelay(delay[i][j]);
@@ -244,7 +256,8 @@ public class DataService {
                 }
             }
         }catch (Exception e){
-
+            logger.error("Error al cargar el Grafo: " + e.getMessage());
+            throw new Exception();
         }
     }
 }

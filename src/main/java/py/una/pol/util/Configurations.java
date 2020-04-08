@@ -64,16 +64,18 @@ public class Configurations {
     private String serverResourceRAM;
     @Value("${server.resource.storage}")
     private String serverResourceStorage;
-    @Value("${server.energy.idle.watts}")
-    private String serverEnergyIdleWatts;
+    @Value("${server.energy.per.core.watts}")
+    private String serverEnergyPerCoreWatts;
     @Value("${server.energy.peak.watts}")
     private String serverEnergyPeakWatts;
     @Value("${server.penalty.cost.cpu}")
-    private String serverPenaltyCostCPU;
+    private Integer serverPenaltyCostCPU;
     @Value("${server.penalty.cost.ram}")
-    private String serverPenaltyCostRAM;
+    private Integer serverPenaltyCostRAM;
     @Value("${server.penalty.cost.storage}")
-    private String serverPenaltyCostStorage;
+    private Integer serverPenaltyCostStorage;
+    @Value("${link.penalty.cost.bandwidth}")
+    private Integer linkPenaltyCostBandwidth;
 
     //Nodo
     @Value("${node.size}")
@@ -109,7 +111,7 @@ public class Configurations {
         sb.append(", serverResourceCPU='").append(serverResourceCPU).append('\'');
         sb.append(", serverResourceRAM='").append(serverResourceRAM).append('\'');
         sb.append(", serverResourceStorage='").append(serverResourceStorage).append('\'');
-        sb.append(", serverEnergyIdleWatts='").append(serverEnergyIdleWatts).append('\'');
+        sb.append(", serverEnergyIdleWatts='").append(serverEnergyPerCoreWatts).append('\'');
         sb.append(", serverEnergyPeakWatts='").append(serverEnergyPeakWatts).append('\'');
         sb.append(", serverPenaltyCostCPU='").append(serverPenaltyCostCPU).append('\'');
         sb.append(", serverPenaltyCostRAM='").append(serverPenaltyCostRAM).append('\'');

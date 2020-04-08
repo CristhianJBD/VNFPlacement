@@ -6,7 +6,7 @@ import lombok.Data;
 public class Link {
 
     //Identificador del Enlace
-    private Integer id;
+    private String id;
 
     //Delay del enlace
     private Integer delay;
