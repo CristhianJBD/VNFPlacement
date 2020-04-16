@@ -2,6 +2,7 @@ package py.una.pol.dto;
 
 import lombok.Data;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -11,7 +12,7 @@ public class Server {
     private String id;
 
     //Vnf que es instalado en el Servidor
-    private List<Vnf> vnf;
+    private List<Vnf> vnf = new ArrayList<>();
 
     //Costo de licencia del Servidor
     private Integer licenceCost;
@@ -35,16 +36,18 @@ public class Server {
     private Integer energyPeakWatts;
 
     //RAM utilizada
-    private Integer resourseUsedRAM;
+    private int resourseUsedRAM;
 
     //Storage Utilizado
-    private Integer resourseUsedStorage;
+    private int resourseUsedStorage;
 
     //CPU utilizado
-    private Integer resourceUsedCPU;
+    private int resourceUsedCPU;
 
     //Energia utilizada
-    private Integer energyUsed;
+    private int energyUsed;
+
+
 
     @Override
     public String toString() {

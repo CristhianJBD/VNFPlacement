@@ -26,8 +26,8 @@ public class Traffic {
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder("Traffic: ");
-        sb.append("nodeOrigin=").append(nodeOrigin);
-        sb.append(", nodeDestiny=").append(nodeDestiny);
+        sb.append("nodeOrigin=").append(nodeOrigin.getId());
+        sb.append(", nodeDestiny=").append(nodeDestiny.getId());
         sb.append(", bandwidth=").append(bandwidth);
         sb.append(", delayMaxSLA=").append(delayMaxSLA);
         sb.append(", penaltyCostSLO=").append(penaltyCostSLO);

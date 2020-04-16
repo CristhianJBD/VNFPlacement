@@ -1,10 +1,12 @@
 package py.una.pol.service;
 
 import org.apache.log4j.Logger;
+import org.jgrapht.DirectedGraph;
 import org.jgrapht.Graph;
 import org.jgrapht.traverse.RandomWalkIterator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import py.una.pol.dto.*;
 import py.una.pol.util.Configurations;
 
@@ -13,14 +15,14 @@ import java.util.List;
 import java.util.Random;
 
 
-@Component
+@Service
 public class VnfService {
     Logger logger = Logger.getLogger(VnfService.class);
 
     @Autowired
     private DataService data;
     @Autowired
-    private Configurations configuration;
+    private ObjectiveFunctionService fo;
 
     public boolean placement() {
         ResultRandomPath resultRandomPath;
@@ -29,33 +31,68 @@ public class VnfService {
                 loadTraffic, resourcesCost, maxUseLink, sloCost, throughput, licencesCost, fragmentation, allLinksCost;
         try {
             data.loadData();
-            Graph<Node, Link> graph = data.graph;
+            DirectedGraph<Node, Link> graph = data.graph;
+            traffic = generateRandomtraffic(data.nodes, data.vnfs);
 
-            traffic = generateRandomtraffic();
             resultRandomPath = createRandomPath(graph, traffic);
             List<Node> nodes = resultRandomPath.getRandomNodes();
             List<Link> links = resultRandomPath.getRandomLinks();
 
-            energyCost = calculateEnergyCost(nodes, traffic.getNodeOrigin());
-            forwardingTrafficCost = calculateForwardingTrafficCost(nodes, links, traffic.getNodeOrigin());
-            hostSize = calculateHostSize(nodes);
-            delayCost = calculateDelayTotal(nodes, links);
-            deployCost = calculateDeployCost(nodes);
-            distance = calculateDistance(links);
-            hops = calculateHops(links);
-            bandwidth = calculateBandwidth(links);
-            numberInstances = calculateNumberIntances(nodes);
-            loadTraffic = calculateLoadTraffic(nodes, links);
-            resourcesCost = calculateResources(nodes);
-            maxUseLink = calculateMaximunUseLink(links);
-            sloCost = calculateSLOCost(nodes,links, traffic.getPenaltyCostSLO(), traffic.getDelayMaxSLA());
-            throughput = calculateThroughput(links);
-            licencesCost = calculateLicencesCost(nodes);
-            fragmentation = calculateResourceFragmentation(nodes,links);
-            allLinksCost = calculateAllLinkCost(links);
+            logger.info(" ");
+
+            energyCost = fo.calculateEnergyCost(nodes, traffic.getNodeOrigin());
+            logger.info("Costo de Energia en dolares: " + energyCost);
+
+            forwardingTrafficCost = fo.calculateForwardingTrafficCost(nodes, links, traffic.getNodeOrigin());
+            logger.info("Costo de Reenvio de Trafico: " + forwardingTrafficCost);
+
+            hostSize = fo.calculateHostSize(nodes);
+            logger.info("Cantidad de Hosts o Servidores utilizados: " + hostSize);
+
+            delayCost = fo.calculateDelayTotal(nodes, links);
+            logger.info("Costo de latencia/Retardo/Retraso total: " + delayCost);
+
+            deployCost = fo.calculateDeployCost(nodes);
+            logger.info("Costo de Instalacion o Configuracion total: " + deployCost);
+
+            distance = fo.calculateDistance(links);
+            logger.info("Distancia total: " + distance);
+
+            hops = fo.calculateHops(links);
+            logger.info("Numero de Saltos/Numero de enlaces de la ruta: " + hops);
+
+            bandwidth = fo.calculateBandwidth(links);
+            logger.info("Ancho de banda total: " + bandwidth);
+
+            numberInstances = fo.calculateNumberIntances(nodes);
+            logger.info("Numero de instancias: " + numberInstances);
+
+            loadTraffic = fo.calculateLoadTraffic(nodes, links);
+            logger.info("Trafico de Carga: " + loadTraffic);
+
+            resourcesCost = fo.calculateResources(nodes);
+            logger.info("Recursos total:" + resourcesCost);
+
+            maxUseLink = fo.calculateMaximunUseLink(links);
+            logger.info("Maxima uitlizacion del enlace: " + maxUseLink);
+
+            sloCost = fo.calculateSLOCost(nodes,links, traffic.getPenaltyCostSLO(), traffic.getDelayMaxSLA());
+            logger.info("Costo por SLO: " + sloCost);
+
+            throughput = fo.calculateThroughput(links);
+            logger.info("Throughput: " + throughput);
+
+            licencesCost = fo.calculateLicencesCost(nodes);
+            logger.info("Costo de licencia total: " + licencesCost);
+
+            fragmentation = fo.calculateResourceFragmentation(nodes,links);
+            logger.info("Costo de Fragmentacion: "+ fragmentation);
+
+            allLinksCost = fo.calculateAllLinkCost(links);
+            logger.info("Costo de todos los enlaces: " + allLinksCost);
 
         } catch (Exception e) {
-            logger.error("Error VNF placement:" + e.getMessage());
+            logger.error("Error VNF placement: " + e.getMessage());
         }
         return true;
     }
@@ -64,19 +101,19 @@ public class VnfService {
     private ResultRandomPath createRandomPath(Graph<Node, Link> graph, Traffic traffic) throws Exception {
         ResultRandomPath resultRandomPath = new ResultRandomPath();
         List<Node> randomNodes = null;
-        List<Link>  randomLinks = null;
+        List<Link> randomLinks = null;
         Node randomNode;
-        Link link;
-        boolean validPath = false;
-        boolean validResources, reuseServer;
-        int indexSfc;
+        Link linkToCopy,link;
+        boolean validPath = false, validResources, reuseServer;
         Random random = new Random();
-        Integer bandwidtCurrent = traffic.getBandwidth();
+        Integer bandwidtCurrent;
+        int indexSfc, cpuToUse, ramToUse, storageToUse, energyToUse;
 
         try {
             while (!validPath) {  // hasta encontrar una solucion factible
                 Node nodeOrigen = traffic.getNodeOrigin();
                 RandomWalkIterator randomWalkIterator = new RandomWalkIterator<>(graph, nodeOrigen);
+                bandwidtCurrent = traffic.getBandwidth();
                 randomNodes = new ArrayList<>();
                 randomLinks = new ArrayList<>();
                 indexSfc = 0; // indice de vnfs del sfc
@@ -87,42 +124,47 @@ public class VnfService {
                         break;  //salir cuando se repite el ultimo nodo
                     }
 
-                    link = data.graph.getEdge(nodeOrigen, randomNode);  //enlace entre los nodos
-                    if (link.getBandwidth() > bandwidtCurrent)   //Se verifica si el enlace tiene capacidad para el ancho de banda
+                    linkToCopy = graph.getEdge(nodeOrigen, randomNode);  //enlace entre los nodos
+                    if (linkToCopy.getBandwidth() < bandwidtCurrent) {  //Se verifica si el enlace tiene capacidad para el ancho de banda
+                        validPath = false;
                         break;
-                    else {
-                        link.setBandwidthUsed(bandwidtCurrent);
+                    } else {
+                        link = setLink(linkToCopy);
+                        link.setBandwidthUsed(link.getBandwidthUsed() + bandwidtCurrent); //Setea el ancho de banda al link utilizado
                         randomLinks.add(link);
                     }
 
                     reuseServer = true;
                     validResources = true;
+                    Node node = setNode(randomNode);   // se setea el nodo aleatorio a otra instanacia de Nodo para que no remplace en el grafo
+                    Server server = node.getServer();  // Servidor del nodo elegido de forma aleatoria
                     while (validResources && reuseServer && !validPath) {
-                        Server server = randomNode.getServer();
                         if (server != null) {
-                            Vnf vnf = traffic.getSfc().getVnfs().get(indexSfc);
+                            Vnf vnf = traffic.getSfc().getVnfs().get(indexSfc);       //Vnf del SFC del trafico
 
-                            Integer cpuToUse = server.getResourceUsedCPU() + vnf.getResourceCPU();
-                            Integer ramToUse = server.getResourseUsedRAM() + vnf.getResourceRAM();
-                            Integer storageToUse = server.getResourseUsedStorage() + vnf.getResourceStorage();
-                            Integer energyToUse = server.getEnergyUsed() + vnf.getResourceCPU() * server.getEnergyPerCoreWatts();
+                            //Se calculan los recursos que seran utilizados
+                            cpuToUse = server.getResourceUsedCPU() + vnf.getResourceCPU();
+                            ramToUse = server.getResourseUsedRAM() + vnf.getResourceRAM();
+                            storageToUse = server.getResourseUsedStorage() + vnf.getResourceStorage();
+                            energyToUse = server.getEnergyUsed() + vnf.getResourceCPU() * server.getEnergyPerCoreWatts();
 
                             //Verificar la capacidad de cada recurso del Servicdor
                             if (cpuToUse < server.getResourceCPU() && ramToUse < server.getResourceRAM() &&
                                     storageToUse < server.getResourceStorage() && energyToUse < server.getEnergyPeakWatts()) {
 
-                                randomNode.getServer().setResourceUsedCPU(cpuToUse);
-                                randomNode.getServer().setResourseUsedRAM(ramToUse);
-                                randomNode.getServer().setResourseUsedStorage(storageToUse);
-                                randomNode.getServer().setEnergyUsed(energyToUse);
-                                randomNode.getServer().getVnf().add(vnf);
+                                //setear los recursos utilizados
+                                node.getServer().setResourceUsedCPU(cpuToUse);
+                                node.getServer().setResourseUsedRAM(ramToUse);
+                                node.getServer().setResourseUsedStorage(storageToUse);
+                                node.getServer().setEnergyUsed(energyToUse);
+                                node.getServer().getVnf().add(vnf);
+                                bandwidtCurrent = (int) (vnf.getBandwidthFactor() * Double.valueOf(bandwidtCurrent));
 
-                                bandwidtCurrent = vnf.getBandwidthFactor() * bandwidtCurrent;
                                 indexSfc++;
                             } else
                                 validResources = false;   // cuando el servidor no cumple la capacidad de algun recurso
 
-                            if (indexSfc == traffic.getSfc().getVnfs().size() - 1) { // se completaron los VNFs por lo tanto es valido el camino
+                            if (indexSfc == traffic.getSfc().getVnfs().size()) { // se completaron los VNFs por lo tanto es valido el camino
                                 validPath = true;
                             }
                             reuseServer = random.nextBoolean();  //random para reutilizar el Servidor
@@ -130,315 +172,80 @@ public class VnfService {
                             reuseServer = false;  // No existe servidor por lo tanto no se puede utilizar el nodo
 
                     }
-                    randomNodes.add(randomNode);
+                    randomNodes.add(node);
                     nodeOrigen = randomNode;
                 }
-                validPath = true;
             }
             resultRandomPath.setRandomLinks(randomLinks);
             resultRandomPath.setRandomNodes(randomNodes);
             return resultRandomPath;
         } catch (Exception e) {
             logger.error("Error al crear la ruta aleatoria para el traffico: " + traffic);
+            logger.error(e);
             throw new Exception();
         }
     }
 
-    private Traffic generateRandomtraffic () throws Exception {
+    private Traffic generateRandomtraffic(List<Node> nodes, List<Vnf> vnfs) throws Exception {
         try {
             Traffic traffic = new Traffic();
             traffic.setBandwidth(300);
             traffic.setDelayMaxSLA(3);
-            traffic.setNodeDestiny(data.nodes.get(5));
-            traffic.setNodeOrigin(data.nodes.get(0));
+            traffic.setNodeDestiny(nodes.get(5));
+            traffic.setNodeOrigin(nodes.get(0));
             traffic.setPenaltyCostSLO(4);
 
             SFC sfc = new SFC();
-            sfc.getVnfs().add(data.vnfs.get(0));
-            sfc.getVnfs().add(data.vnfs.get(2));
-            sfc.getVnfs().add(data.vnfs.get(4));
+            sfc.getVnfs().add(vnfs.get(0));
+            sfc.getVnfs().add(vnfs.get(2));
+            sfc.getVnfs().add(vnfs.get(4));
             traffic.setSfc(sfc);
 
             return traffic;
-        }catch (Exception e){
+        } catch (Exception e) {
             logger.error("Error al crear el traffico Random:" + e.getMessage());
             throw new Exception();
         }
-
     }
 
-    private Integer calculateEnergyCost(List<Node> nodes, Node originNode) throws Exception {
-        int energyCost;
-        try {
-            energyCost =+ originNode.getEnergyCost();
-            for (Node node : nodes){
-                if(node.getServer()!=null){
-                    energyCost =+ node.getServer().getEnergyCost() * node.getServer().getEnergyUsed();
-                }else
-                    energyCost =+ node.getEnergyCost();
-            }
-            return energyCost;
-        }catch (Exception e){
-            logger.error("Error al calcular la energia: " + e.getMessage());
-            throw new Exception();
+    private Link setLink(Link linkToCopy) {
+        Link link = new Link();
+
+        link.setId(linkToCopy.getId());
+        link.setDistance(linkToCopy.getDistance());
+        link.setDelay(linkToCopy.getDelay());
+        link.setBandwidthCost(linkToCopy.getBandwidthCost());
+        link.setBandwidth(linkToCopy.getBandwidth());
+        link.setBandwidthUsed(link.getBandwidthUsed());
+
+        return link;
+    }
+
+    private Node setNode(Node nodeToCopy) {
+        Server serverToCopy = nodeToCopy.getServer();
+        Node node = new Node();
+
+        if (serverToCopy != null) {
+            Server server = new Server();
+            server.setId(serverToCopy.getId());
+            server.setEnergyPerCoreWatts(serverToCopy.getEnergyPerCoreWatts());
+            server.setEnergyCost(serverToCopy.getEnergyCost());
+            server.setEnergyPeakWatts(serverToCopy.getEnergyPeakWatts());
+            server.setEnergyUsed(serverToCopy.getEnergyUsed());
+            server.setResourceCPU(serverToCopy.getResourceCPU());
+            server.setResourceRAM(serverToCopy.getResourceRAM());
+            server.setResourceStorage(serverToCopy.getResourceStorage());
+            server.setResourceUsedCPU(serverToCopy.getResourceUsedCPU());
+            server.setResourseUsedRAM(serverToCopy.getResourseUsedRAM());
+            server.setResourseUsedStorage(serverToCopy.getResourseUsedStorage());
+            server.setLicenceCost(serverToCopy.getLicenceCost());
+            node.setServer(server);
         }
+
+        node.setId(nodeToCopy.getId());
+        node.setEnergyCost(nodeToCopy.getEnergyCost());
+        return node;
     }
-
-
-    private Integer calculateForwardingTrafficCost(List<Node> nodes, List<Link> links, Node originNode) throws Exception {
-        int forwardingTrafficCost;
-        try {
-            forwardingTrafficCost =+ originNode.getEnergyCost();
-            for (Link link: links){
-                forwardingTrafficCost =+ link.getBandwidthUsed() * link.getBandwidthCost();
-            }
-            for(Node node: nodes){
-                if (node.getServer()!= null) {
-                    forwardingTrafficCost =+ node.getServer().getEnergyUsed() * node.getServer().getEnergyCost();
-                }
-                forwardingTrafficCost =+ node.getEnergyCost();
-            }
-            return forwardingTrafficCost;
-        }catch (Exception e){
-            logger.error("Error al calcular la energia minima: " + e.getMessage());
-            throw new Exception();
-        }
-    }
-
-    private Integer calculateHostSize(List<Node> nodes) throws Exception {
-        int hostSize = 0;
-        try {
-            for (Node node : nodes){
-                if(node.getServer()!=null){
-                    hostSize =+ 1;
-                }
-            }
-            return hostSize;
-        }catch (Exception e){
-            logger.error("Error al calcular la cantidad de hosts utilizados: " + e.getMessage());
-            throw new Exception();
-        }
-    }
-
-    private Integer calculateDelayTotal(List<Node> nodes, List<Link> links) throws Exception {
-        int latency = 0;
-        try {
-            for (Node node : nodes){
-                if(node.getServer()!=null){
-                    for (Vnf vnf : node.getServer().getVnf())
-                    latency =+ vnf.getDelay();
-                }
-            }
-            for (Link link : links){
-                latency =+ link.getDelay();
-            }
-            return latency;
-        }catch (Exception e){
-            logger.error("Error al calcular el Delay total: " + e.getMessage());
-            throw new Exception();
-        }
-    }
-
-    private Integer calculateDeployCost(List<Node> nodes) throws Exception {
-        int deployHost = 0;
-        try {
-            for (Node node : nodes){
-                if(node.getServer()!=null){
-                    for (Vnf vnf : node.getServer().getVnf())
-                        deployHost =+ vnf.getDeploy();
-                    }
-                }
-            return deployHost;
-        }catch (Exception e){
-            logger.error("Error al calcular el costo de Intalacion o configuracion de los VNFs: " + e.getMessage());
-            throw new Exception();
-        }
-    }
-
-    //Confirmar si es la distancia total o por enlace?
-    private Integer calculateDistance(List<Link> links) throws Exception {
-        int distance = 0;
-        try {
-            for (Link link : links){
-                distance =+ link.getDistance();
-            }
-            return distance;
-        }catch (Exception e){
-            logger.error("Error al calcular la distancia total: " + e.getMessage());
-            throw new Exception();
-        }
-    }
-
-    private Integer calculateHops(List<Link> links) throws Exception {
-        try {
-            return links.size();
-        }catch (Exception e){
-            logger.error("Error al calcular el numero de saltos: " + e.getMessage());
-            throw new Exception();
-        }
-    }
-
-    //se multiplica por el costo por unidad de ancho de banda?
-    private Integer calculateBandwidth(List<Link> links) throws Exception {
-        int bandwidth = 0;
-        try {
-            for (Link link : links){
-                bandwidth =+ link.getBandwidth();
-            }
-            return bandwidth;
-        }catch (Exception e){
-            logger.error("Error al calcular el ancho de banda total: " + e.getMessage());
-            throw new Exception();
-        }
-    }
-
-    //analizar los flujos que pasan para reutilizar los VNFs
-    private Integer calculateNumberIntances(List<Node> nodes) throws Exception {
-        int instances = 0;
-        try {
-            for (Node node : nodes){
-                if(node.getServer()!=null){
-                    instances =+ node.getServer().getVnf().size();
-                }
-            }
-            return instances;
-        }catch (Exception e){
-            logger.error("Error al calcular el numero de instacias: " + e.getMessage());
-            throw new Exception();
-        }
-    }
-
-    private Integer calculateLoadTraffic(List<Node> nodes, List<Link> links) throws Exception {
-        int delayTotal;
-        int bandwidth;
-        try {
-            delayTotal = calculateDelayTotal(nodes, links);
-            bandwidth = calculateBandwidth(links);
-
-            return bandwidth * delayTotal;
-        }catch (Exception e){
-            logger.error("Error al calcular el Trafico de Carga: " + e.getMessage());
-            throw new Exception();
-        }
-    }
-
-    private Integer calculateResources(List<Node> nodes) throws Exception {
-        int resourceCPU = 0;
-        int resourceRAM = 0;
-        int resourceStorage = 0;
-        try {
-            for (Node node : nodes){
-                if(node.getServer()!=null){
-                    resourceCPU =+ node.getServer().getResourceUsedCPU();
-                    resourceRAM =+ node.getServer().getResourseUsedRAM();
-                    resourceStorage =+ node.getServer().getResourseUsedStorage();
-                    }
-                }
-
-            return resourceCPU + resourceRAM + resourceStorage;
-        }catch (Exception e){
-            logger.error("Error al calcular el consumo total de Recursos: " + e.getMessage());
-            throw new Exception();
-        }
-    }
-
-    //Como calcular la maxima utlizacion del enlace?
-    private Integer calculateMaximunUseLink(List<Link> links) throws Exception {
-        int maximunUseLink = 0;
-        try {
-            for (Link link : links){
-
-            }
-            return maximunUseLink;
-        }catch (Exception e){
-            logger.error("Error al calcular la maxima utilizacion del enlace: " + e.getMessage());
-            throw new Exception();
-        }
-    }
-
-    private Integer calculateSLOCost(List<Node> nodes, List<Link> links, Integer sloCost, Integer delayMax) throws Exception {
-        try {
-            if(delayMax > calculateDelayTotal(nodes, links))
-                return sloCost;
-            else
-                return 0;
-        }catch (Exception e){
-            logger.error("Error al calcular el costo de SLO: " + e.getMessage());
-            throw new Exception();
-        }
-    }
-
-    //Seria lo mismo que calcular el ancho de banda
-    private Integer calculateThroughput(List<Link> links) throws Exception {
-        int throughput = 0;
-        try {
-            for(Link link : links){
-
-            }
-
-            return throughput;
-        }catch (Exception e){
-            logger.error("Error al calcular el throughput: " + e.getMessage());
-            throw new Exception();
-        }
-    }
-
-
-    private Integer calculateLicencesCost(List<Node> nodes) throws Exception {
-        int licencesCost = 0;
-        try {
-            for (Node node : nodes){
-                if(node.getServer()!=null){
-                    for (Vnf vnf : node.getServer().getVnf())
-                        licencesCost =+ vnf.getLicenceCost();
-
-                    licencesCost=+ node.getServer().getLicenceCost();
-                }
-            }
-            return licencesCost;
-        }catch (Exception e){
-            logger.error("Error al calcular el costo de licencias total: " + e.getMessage());
-            throw new Exception();
-        }
-    }
-
-    private Integer calculateResourceFragmentation(List<Node> nodes, List<Link> links) throws Exception {
-        int fragmentation = 0;
-        try {
-            for (Node node : nodes){
-                if(node.getServer()!=null){
-                    fragmentation =+ (node.getServer().getResourceCPU() - node.getServer().getResourceUsedCPU()) *
-                            configuration.getServerPenaltyCostCPU();
-                    fragmentation =+ (node.getServer().getResourceRAM() - node.getServer().getResourseUsedRAM()) *
-                    configuration.getServerPenaltyCostRAM();
-                    fragmentation =+ (node.getServer().getResourceStorage() - node.getServer().getResourseUsedStorage()) *
-                            configuration.getServerPenaltyCostStorage();
-                }
-            }
-            for (Link link : links){
-                fragmentation =+ (link.getBandwidth() - link.getBandwidthUsed()) * configuration.getLinkPenaltyCostBandwidth();
-            }
-            return fragmentation;
-        }catch (Exception e){
-            logger.error("Error al calcular la fragmentacion de recursos: " + e.getMessage());
-            throw new Exception();
-        }
-    }
-
-    private Integer calculateAllLinkCost(List<Link> links) throws Exception {
-        int linksCost = 0;
-        try {
-            for (Link link : links){
-                linksCost =+ link.getBandwidth() * link.getBandwidthCost();
-            }
-            return linksCost;
-        }catch (Exception e){
-            logger.error("Error al calcular el costo de todos los enlaces: " + e.getMessage());
-            throw new Exception();
-        }
-    }
-
-
 
 }
 

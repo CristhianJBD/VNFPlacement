@@ -17,11 +17,11 @@ public class Link {
     //Ancho de banda del enlace
     private Integer bandwidth;
 
-    //Costo por ancho de banda que pasa por el enlace
+    //Costo por unidad de Mbit que pasa por el enlace
     private Integer bandwidthCost;
 
     //Ancho de banda utilizada
-    private Integer bandwidthUsed;
+    private int bandwidthUsed;
 
     @Override
     public String toString() {

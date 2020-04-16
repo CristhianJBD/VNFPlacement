@@ -26,7 +26,7 @@ public class Vnf {
     private Integer licenceCost;
 
     //Factor de modiicacion del VNF (En %)
-    private Integer bandwidthFactor;
+    private Double bandwidthFactor;
 
     @Override
     public String toString() {

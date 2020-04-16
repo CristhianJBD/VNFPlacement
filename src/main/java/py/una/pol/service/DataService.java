@@ -72,7 +72,7 @@ public class DataService {
                 vnf.setResourceRAM(Integer.valueOf(rams[i]));
                 vnf.setResourceStorage(Integer.valueOf(storages[i]));
                 vnf.setLicenceCost(Integer.valueOf(licences[i]));
-                vnf.setBandwidthFactor(Integer.valueOf(bandwidthFactor[i]));
+                vnf.setBandwidthFactor(Double.valueOf(bandwidthFactor[i]));
 
                 logger.info(vnf.toString());
                 vnfs.add(vnf);
