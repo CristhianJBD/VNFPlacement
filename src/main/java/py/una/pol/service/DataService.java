@@ -29,10 +29,10 @@ public class DataService {
     public List<Vnf> vnfs = new ArrayList<>();
     public List<Server> servers = new ArrayList<>();
     public List<Node> nodes = new ArrayList<>();
-    private Integer[][] delay;
-    private Integer[][] distance;
-    private Integer[][] bandwidthCost;
-    private Integer[][] bandwidth;
+    private int[][] delay;
+    private int[][] distance;
+    private double[][] bandwidthCost;
+    private double[][] bandwidth;
     private String[][] matrixNodes;
     DirectedGraph<Node, Link> graph = new DefaultDirectedGraph<>(Link.class);
 
@@ -98,6 +98,9 @@ public class DataService {
             String[] cpus = configuration.getServerResourceCPU().split(separator);
             String[] rams = configuration.getServerResourceRAM().split(separator);
             String[] storages = configuration.getServerResourceStorage().split(separator);
+            String[] cpusCost = configuration.getServerResourceCPUCost().split(separator);
+            String[] ramsCost = configuration.getServerResourceRAMCost().split(separator);
+            String[] storagesCost = configuration.getServerResourceStorageCost().split(separator);
             String[] energyPerCore = configuration.getServerEnergyPerCoreWatts().split(separator);
             String[] energyPeaks = configuration.getServerEnergyPeakWatts().split(separator);
 
@@ -105,10 +108,13 @@ public class DataService {
                 server = new Server();
                 server.setId(ids[i]);
                 server.setLicenceCost(Integer.valueOf(licences[i]));
-                server.setEnergyCost(Integer.valueOf(energyCosts[i]));
+                server.setEnergyCost(Double.valueOf(energyCosts[i]));
                 server.setResourceCPU(Integer.valueOf(cpus[i]));
                 server.setResourceRAM(Integer.valueOf(rams[i]));
                 server.setResourceStorage(Integer.valueOf(storages[i]));
+                server.setResourceCPUCost(Double.valueOf(cpusCost[i]));
+                server.setResourceRAMCost(Double.valueOf(ramsCost[i]));
+                server.setResourceStorageCost(Double.valueOf(storagesCost[i]));
                 server.setEnergyPerCoreWatts(Integer.valueOf(energyPerCore[i]));
                 server.setEnergyPeakWatts(Integer.valueOf(energyPeaks[i]));
 
@@ -137,7 +143,7 @@ public class DataService {
             for (int i = 0; i < configuration.getNodeSize(); i++) {
                 node = new Node();
                 node.setId(ids[i]);
-                node.setEnergyCost(Integer.valueOf(energyCosts[i]));
+                node.setEnergyCost(Double.valueOf(energyCosts[i]));
                 node.setServer(getServer(nodeServer[i]));
 
                 logger.info(node.toString());
@@ -187,7 +193,7 @@ public class DataService {
             logger.info(Arrays.deepToString(matrixNodes));
 
             logger.info(reader.readLine());
-            delay = new Integer[size][size];
+            delay = new int[size][size];
             for (int i = 0; i < size; i++) {
                 String[] line = reader.readLine().split(" ");
 
@@ -198,7 +204,7 @@ public class DataService {
             logger.info(Arrays.deepToString(delay));
 
             logger.info(reader.readLine());
-            distance = new Integer[size][size];
+            distance = new int[size][size];
             for (int i = 0; i < size; i++) {
                 String[] line = reader.readLine().split(" ");
 
@@ -209,23 +215,23 @@ public class DataService {
             logger.info(Arrays.deepToString(distance));
 
             logger.info(reader.readLine());
-            bandwidth = new Integer[size][size];
+            bandwidth = new double[size][size];
             for (int i = 0; i < size; i++) {
                 String[] line = reader.readLine().split(" ");
 
                 for (int j = 0; j < size; j++) {
-                    bandwidth[i][j] = Integer.parseInt(line[j]);
+                    bandwidth[i][j] = Double.valueOf(line[j]);
                 }
             }
             logger.info(Arrays.deepToString(bandwidth));
 
             logger.info(reader.readLine());
-            bandwidthCost = new Integer[size][size];
+            bandwidthCost = new double[size][size];
             for (int i = 0; i < size; i++) {
                 String[] line = reader.readLine().split(" ");
 
                 for (int j = 0; j < size; j++) {
-                    bandwidthCost[i][j] = Integer.parseInt(line[j]);
+                    bandwidthCost[i][j] = Double.valueOf(line[j]);
                 }
             }
             logger.info(Arrays.deepToString(bandwidthCost));

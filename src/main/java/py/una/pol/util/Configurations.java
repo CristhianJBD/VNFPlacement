@@ -64,18 +64,24 @@ public class Configurations {
     private String serverResourceRAM;
     @Value("${server.resource.storage}")
     private String serverResourceStorage;
+    @Value("${server.resource.cpu.cost}")
+    private String serverResourceCPUCost;
+    @Value("${server.resource.ram.cost}")
+    private String serverResourceRAMCost;
+    @Value("${server.resource.storage.cost}")
+    private String serverResourceStorageCost;
     @Value("${server.energy.per.core.watts}")
     private String serverEnergyPerCoreWatts;
     @Value("${server.energy.peak.watts}")
     private String serverEnergyPeakWatts;
-    @Value("${server.penalty.cost.cpu}")
-    private Integer serverPenaltyCostCPU;
-    @Value("${server.penalty.cost.ram}")
-    private Integer serverPenaltyCostRAM;
-    @Value("${server.penalty.cost.storage}")
-    private Integer serverPenaltyCostStorage;
-    @Value("${link.penalty.cost.bandwidth}")
-    private Integer linkPenaltyCostBandwidth;
+    @Value("${server.penalty.cpu.cost}")
+    private double serverPenaltyCPUCost;
+    @Value("${server.penalty.ram.cost}")
+    private double serverPenaltyRAMCost;
+    @Value("${server.penalty.storage.cost}")
+    private double serverPenaltyStorageCost;
+    @Value("${link.penalty.bandwidth.cost}")
+    private double linkPenaltyBandwidthCost;
 
     //Nodo
     @Value("${node.size}")
@@ -102,20 +108,24 @@ public class Configurations {
         return sb.toString();
     }
 
-    public String toStringServers() {
+
+    public String toStringServer() {
         final StringBuilder sb = new StringBuilder("Servers{");
-        sb.append("serverSize=").append(serverSize);
-        sb.append(", serverID='").append(serverId).append('\'');
+        sb.append(", serverSize=").append(serverSize);
+        sb.append(", serverId='").append(serverId).append('\'');
         sb.append(", serverLicenceCost='").append(serverLicenceCost).append('\'');
         sb.append(", serverEnergyCost='").append(serverEnergyCost).append('\'');
         sb.append(", serverResourceCPU='").append(serverResourceCPU).append('\'');
         sb.append(", serverResourceRAM='").append(serverResourceRAM).append('\'');
         sb.append(", serverResourceStorage='").append(serverResourceStorage).append('\'');
-        sb.append(", serverEnergyIdleWatts='").append(serverEnergyPerCoreWatts).append('\'');
+        sb.append(", serverResourceCPUCost='").append(serverResourceCPUCost).append('\'');
+        sb.append(", serverResourceRAMCost='").append(serverResourceRAMCost).append('\'');
+        sb.append(", serverResourceStorageCost='").append(serverResourceStorageCost).append('\'');
+        sb.append(", serverEnergyPerCoreWatts='").append(serverEnergyPerCoreWatts).append('\'');
         sb.append(", serverEnergyPeakWatts='").append(serverEnergyPeakWatts).append('\'');
-        sb.append(", serverPenaltyCostCPU='").append(serverPenaltyCostCPU).append('\'');
-        sb.append(", serverPenaltyCostRAM='").append(serverPenaltyCostRAM).append('\'');
-        sb.append(", serverPenaltyCostStorage='").append(serverPenaltyCostStorage).append('\'');
+        sb.append(", serverPenaltyCPUCost=").append(serverPenaltyCPUCost);
+        sb.append(", serverPenaltyRAMCost=").append(serverPenaltyRAMCost);
+        sb.append(", serverPenaltyStorageCost=").append(serverPenaltyStorageCost);
         sb.append('}');
         return sb.toString();
     }

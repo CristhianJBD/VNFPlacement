@@ -15,34 +15,43 @@ public class Server {
     private List<Vnf> vnf = new ArrayList<>();
 
     //Costo de licencia del Servidor
-    private Integer licenceCost;
+    private double licenceCost;
 
     //Costo de Energia en Dolares por Watt
-    private Integer energyCost;
+    private double energyCost;
 
     //Capacidad de CPU del Servidor (Cantidad de Cores)
-    private Integer resourceCPU;
+    private int resourceCPU;
 
     //Capacidad de RAM del Servidor (En GB)
-    private Integer resourceRAM;
+    private int resourceRAM;
 
     //Capacidad de almacenamiento del Servidor (En GB)
-    private Integer resourceStorage;
+    private int resourceStorage;
 
-    //Consumo de Energia en Watts al activar el Servidor
-    private Integer energyPerCoreWatts;
+    //Costo por unidad de CPU del Servidor (En dolares)
+    private double resourceCPUCost;
+
+    //Costo por unidad de RAM en GB del Servidor (En dolares)
+    private double resourceRAMCost;
+
+    //Costo por unidad de almacenamiento del Servidor (En dolares)
+    private double resourceStorageCost;
+
+    //Consumo de Energia por core en whatts
+    private int energyPerCoreWatts;
 
     //Capacidad maxima de Energia en Watts del Servidor
-    private Integer energyPeakWatts;
+    private int energyPeakWatts;
 
     //RAM utilizada
-    private int resourseUsedRAM;
+    private int resourceRAMUsed;
 
     //Storage Utilizado
-    private int resourseUsedStorage;
+    private int resourceStorageUsed;
 
     //CPU utilizado
-    private int resourceUsedCPU;
+    private int resourceCPUUsed;
 
     //Energia utilizada
     private int energyUsed;
@@ -58,10 +67,13 @@ public class Server {
         sb.append(", resourceCPU=").append(resourceCPU);
         sb.append(", resourceRAM=").append(resourceRAM);
         sb.append(", resourceStorage=").append(resourceStorage);
+        sb.append(", resourceCPUCost=").append(resourceCPUCost);
+        sb.append(", resourceRAMCost=").append(resourceRAMCost);
+        sb.append(", resourceStorageCost=").append(resourceStorageCost);
         sb.append(", energyIdleWatts=").append(energyPerCoreWatts);
-        sb.append(", resourseUsedRAM=").append(resourseUsedRAM);
-        sb.append(", resourseUsedStorage=").append(resourseUsedStorage);
-        sb.append(", resourceUsedCPU=").append(resourceUsedCPU);
+        sb.append(", resourceRAMUsed=").append(resourceRAMUsed);
+        sb.append(", resourceStorageUsed=").append(resourceStorageUsed);
+        sb.append(", resourceCPUUsed=").append(resourceCPUUsed);
         sb.append(", energyUsed=").append(energyUsed);
         return sb.toString();
     }

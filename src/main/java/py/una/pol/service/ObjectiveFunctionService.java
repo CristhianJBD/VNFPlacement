@@ -21,8 +21,8 @@ public class ObjectiveFunctionService {
     Costo de la Energia en Dolares = suma de los costos(dolares) de energia utilizados en los nodos mas
     la energia en watts utilizada en cada servidor por el costo de energia correspondiente al servidor
      */
-    public Integer calculateEnergyCost(List<Node> nodes, Node originNode) throws Exception {
-        int energyCost;
+    public double calculateEnergyCost(List<Node> nodes, Node originNode) throws Exception {
+        double energyCost;
         try {
             //Costo de energia consumida en el Nodo origen
             energyCost = originNode.getEnergyCost();
@@ -48,8 +48,8 @@ public class ObjectiveFunctionService {
         Costo de Reenvio de trafico = suma del costo en dolar por el ancho de banda utilizado en cada enlace
         mas la energia total en dolares
      */
-    public Integer calculateForwardingTrafficCost(List<Node> nodes, List<Link> links, Node originNode) throws Exception {
-        int forwardingTrafficCost;
+    public double calculateForwardingTrafficCost(List<Node> nodes, List<Link> links, Node originNode) throws Exception {
+        double forwardingTrafficCost;
         try {
             //Energia Total en dolares
             forwardingTrafficCost = calculateEnergyCost(nodes, originNode);
@@ -65,7 +65,7 @@ public class ObjectiveFunctionService {
         }
     }
 
-    public Integer calculateHostSize(List<Node> nodes) throws Exception {
+    public int calculateHostSize(List<Node> nodes) throws Exception {
         int hostSize = 0;
         try {
             //Numero de Servidores utilizados para instalar un VNF
@@ -80,7 +80,7 @@ public class ObjectiveFunctionService {
         }
     }
 
-    public Integer calculateDelayTotal(List<Node> nodes, List<Link> links) throws Exception {
+    public int calculateDelayTotal(List<Node> nodes, List<Link> links) throws Exception {
         int latency = 0;
         try {
             //Suma del delay de procesamiento de cada VNF instalado
@@ -101,7 +101,7 @@ public class ObjectiveFunctionService {
         }
     }
 
-    public Integer calculateDeployCost(List<Node> nodes) throws Exception {
+    public int calculateDeployCost(List<Node> nodes) throws Exception {
         int deployCost = 0;
         try {
             //Suma del costo de deployar cada VNF
@@ -117,7 +117,7 @@ public class ObjectiveFunctionService {
         }
     }
 
-    public Integer calculateDistance(List<Link> links) throws Exception {
+    public int calculateDistance(List<Link> links) throws Exception {
         int distance = 0;
         try {
             // suma de las distancias de los enlaces
@@ -131,7 +131,7 @@ public class ObjectiveFunctionService {
         }
     }
 
-    public Integer calculateHops(List<Link> links) throws Exception {
+    public int calculateHops(List<Link> links) throws Exception {
         try {
             return links.size();
         } catch (Exception e) {
@@ -140,8 +140,8 @@ public class ObjectiveFunctionService {
         }
     }
 
-    public Integer calculateLicencesCost(List<Node> nodes) throws Exception {
-        int licencesCost = 0;
+    public double calculateLicencesCost(List<Node> nodes) throws Exception {
+        double licencesCost = 0;
         try {
             for (Node node : nodes) {
                 if (node.getServer() != null) {
@@ -160,10 +160,10 @@ public class ObjectiveFunctionService {
         }
     }
 
-    public Integer calculateSLOCost(List<Node> nodes, List<Link> links, Integer sloCost, Integer delayMax) throws Exception {
+    public double calculateSLOCost(List<Node> nodes, List<Link> links, double sloCost, Integer delayMax) throws Exception {
         try {
             //Costo por superar el maximo delay
-            if (delayMax > calculateDelayTotal(nodes, links)) {
+            if (delayMax < calculateDelayTotal(nodes, links)) {
                 return sloCost;
             }else{
                 return 0;
@@ -174,28 +174,28 @@ public class ObjectiveFunctionService {
         }
     }
 
-    public Integer calculateResourceFragmentation(List<Node> nodes, List<Link> links) throws Exception {
-        int fragmentation = 0;
+    public double calculateResourceFragmentation(List<Node> nodes, List<Link> links) throws Exception {
+        double fragmentation = 0;
         try {
             //Costo de multa de cada recurso por el recurso que sobra de la capacidad total de cada Servidor
             for (Node node : nodes) {
                 if (node.getServer() != null) {
                     fragmentation = fragmentation+
-                            (node.getServer().getResourceCPU() - node.getServer().getResourceUsedCPU()) *
-                                    configuration.getServerPenaltyCostCPU();
+                            (node.getServer().getResourceCPU() - node.getServer().getResourceCPUUsed()) *
+                                    configuration.getServerPenaltyCPUCost();
                     fragmentation = fragmentation+
-                            (node.getServer().getResourceRAM() - node.getServer().getResourseUsedRAM()) *
-                                    configuration.getServerPenaltyCostRAM();
+                            (node.getServer().getResourceRAM() - node.getServer().getResourceRAMUsed()) *
+                                    configuration.getServerPenaltyRAMCost();
                     fragmentation = fragmentation+
-                            (node.getServer().getResourceStorage() - node.getServer().getResourseUsedStorage()) *
-                                    configuration.getServerPenaltyCostStorage();
+                            (node.getServer().getResourceStorage() - node.getServer().getResourceStorageUsed()) *
+                                    configuration.getServerPenaltyStorageCost();
                 }
             }
 
             //Costo de multa por el ancho banda que sobra de la capacidad total de cada enlace
             for (Link link : links)
                 fragmentation = fragmentation +
-                        (link.getBandwidth() - link.getBandwidthUsed()) * configuration.getLinkPenaltyCostBandwidth();
+                        (link.getBandwidth() - link.getBandwidthUsed()) * configuration.getLinkPenaltyBandwidthCost();
 
             return fragmentation;
         } catch (Exception e) {
@@ -204,23 +204,33 @@ public class ObjectiveFunctionService {
         }
     }
 
-    public Integer calculateAllLinkCost(List<Link> links) throws Exception {
-        int linksCost = 0;
+    public double calculateResources(List<Node> nodes) throws Exception {
+        double resourceCPUCost = 0, resourceRAMCost = 0, resourceStorageCost = 0;
+        double resourceTotalCost;
         try {
-            //suma del costo unitario * Ancho de banda requerido
-            for (Link link : links)
-                linksCost = linksCost + link.getBandwidth() * link.getBandwidthCost();
+            //Suma de los recursos utilizados de cada servidor
+            for (Node node : nodes)
+                if (node.getServer() != null) {
+                    resourceCPUCost = resourceCPUCost +
+                            (node.getServer().getResourceCPUUsed()*node.getServer().getResourceCPUCost());
+                    resourceRAMCost = resourceRAMCost +
+                            (node.getServer().getResourceRAMUsed()*node.getServer().getResourceRAMCost());
+                    resourceStorageCost = resourceStorageCost +
+                            (node.getServer().getResourceStorageUsed()*node.getServer().getResourceStorageCost());
+                }
 
-            return linksCost;
+            resourceTotalCost = resourceCPUCost + resourceRAMCost + resourceStorageCost;
+            return resourceTotalCost;
         } catch (Exception e) {
-            logger.error("Error al calcular el costo de todos los enlaces: " + e.getMessage());
+            logger.error("Error al calcular el consumo total de Recursos: " + e.getMessage());
             throw new Exception();
         }
     }
 
+
     //se multiplica por el costo por unidad de ancho de band (por unidad de Mbit)?
-    public Integer calculateBandwidth(List<Link> links) throws Exception {
-        int bandwidth = 0;
+    public double calculateBandwidth(List<Link> links) throws Exception {
+        double bandwidth = 0;
         try {
             //Suma del ancho de banda de cada enlace de la ruta
             for (Link link : links)
@@ -233,26 +243,26 @@ public class ObjectiveFunctionService {
         }
     }
 
-    //no contempla los flujos que pasan para reutilizar los VNFs?
-    public Integer calculateNumberIntances(List<Node> nodes) throws Exception {
-        int instances = 0;
+    //Verificar formula?
+    public double calculateAllLinkCost(List<Link> links) throws Exception {
+        double linksCost = 0;
         try {
-            for (Node node : nodes)
-                if (node.getServer() != null)
-                    instances = instances + node.getServer().getVnf().size();
+            //suma del costo unitario * Ancho de banda requerido
+            for (Link link : links)
+                linksCost = linksCost + link.getBandwidth() * link.getBandwidthCost();
 
-            return instances;
+            return linksCost;
         } catch (Exception e) {
-            logger.error("Error al calcular el numero de instacias: " + e.getMessage());
+            logger.error("Error al calcular el costo de todos los enlaces: " + e.getMessage());
             throw new Exception();
         }
     }
 
     //Verificar formula?
-    public Integer calculateLoadTraffic(List<Node> nodes, List<Link> links) throws Exception {
+    public double calculateLoadTraffic(List<Node> nodes, List<Link> links) throws Exception {
         int delayTotal;
-        int bandwidth = 0;
-        int loadTraffic;
+        double bandwidth = 0;
+        double loadTraffic;
         try {
             //Delay total
             delayTotal = calculateDelayTotal(nodes, links);
@@ -269,35 +279,26 @@ public class ObjectiveFunctionService {
         }
     }
 
-    //Se suman todos juntos los recursos?
-    public Integer calculateResources(List<Node> nodes) throws Exception {
-        int resourceCPU = 0;
-        int resourceRAM = 0;
-        int resourceStorage = 0;
-        int resourceTotal;
+    //no contempla los flujos que pasan para reutilizar los VNFs?
+    public int calculateNumberIntances(List<Node> nodes) throws Exception {
+        int instances = 0;
         try {
-            //Suma de los recursos utilizados de cada servidor
             for (Node node : nodes)
-                if (node.getServer() != null) {
-                    resourceCPU = resourceCPU + node.getServer().getResourceUsedCPU();
-                    resourceRAM = resourceRAM + node.getServer().getResourseUsedRAM();
-                    resourceStorage = resourceStorage + node.getServer().getResourseUsedStorage();
-                }
+                if (node.getServer() != null)
+                    instances = instances + node.getServer().getVnf().size();
 
-            resourceTotal = resourceCPU + resourceRAM + resourceStorage;
-            return resourceTotal;
+            return instances;
         } catch (Exception e) {
-            logger.error("Error al calcular el consumo total de Recursos: " + e.getMessage());
+            logger.error("Error al calcular el numero de instacias: " + e.getMessage());
             throw new Exception();
         }
     }
 
     //Como calcular la maxima utlizacion del enlace?
-    public Integer calculateMaximunUseLink(List<Link> links) throws Exception {
+    public int calculateMaximunUseLink(List<Link> links) throws Exception {
         int maximunUseLink = 0;
         try {
             for (Link link : links) {
-
             }
             return maximunUseLink;
         } catch (Exception e) {
@@ -308,11 +309,10 @@ public class ObjectiveFunctionService {
 
 
     //Seria lo mismo que calcular el ancho de banda?
-    public Integer calculateThroughput(List<Link> links) throws Exception {
+    public int calculateThroughput(List<Link> links) throws Exception {
         int throughput = 0;
         try {
             for (Link link : links) {
-
             }
             return throughput;
         } catch (Exception e) {

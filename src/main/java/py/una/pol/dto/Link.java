@@ -9,19 +9,19 @@ public class Link {
     private String id;
 
     //Delay del enlace
-    private Integer delay;
+    private int delay;
 
     //Distancia del enlace
-    private Integer distance;
+    private int distance;
 
     //Ancho de banda del enlace
-    private Integer bandwidth;
+    private double bandwidth;
 
     //Costo por unidad de Mbit que pasa por el enlace
-    private Integer bandwidthCost;
+    private double bandwidthCost;
 
     //Ancho de banda utilizada
-    private int bandwidthUsed;
+    private double bandwidthUsed;
 
     @Override
     public String toString() {

@@ -8,25 +8,25 @@ public class Vnf {
     private String id;
 
     //Delay de procesamiento del VNF
-    private Integer delay;
+    private int delay;
 
     //Costo de Deployar o Instalar el VNF
-    private Integer deploy;
+    private int deploy;
 
     //Requerimiento de CPU del VNF (Cantidad de Cores)
-    private Integer resourceCPU;
+    private int resourceCPU;
 
     //Requerimiento de RAM del VNF (En GB)
-    private Integer resourceRAM;
+    private int resourceRAM;
 
     //Requerimiento de almacenamiento del VNF (En GB)
-    private Integer resourceStorage;
+    private int resourceStorage;
 
     //Costo de licencia del VNF (En dolares)
-    private Integer licenceCost;
+    private double licenceCost;
 
     //Factor de modiicacion del VNF (En %)
-    private Double bandwidthFactor;
+    private double bandwidthFactor;
 
     @Override
     public String toString() {

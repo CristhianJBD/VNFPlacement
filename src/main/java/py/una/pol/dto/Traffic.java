@@ -12,13 +12,13 @@ public class Traffic {
     private Node nodeDestiny;
 
     //Ancho de Banda Inicial
-    private Integer bandwidth;
+    private int bandwidth;
 
     //Maximo Delay permitido por el trafico de acuero al SLA
-    private Integer delayMaxSLA;
+    private int delayMaxSLA;
 
     //Costo en dolares por falta del SLA
-    private Integer penaltyCostSLO;
+    private double penaltyCostSLO;
 
     //Cadena de Servicio (Secuencias de VNF)
     private SFC sfc;

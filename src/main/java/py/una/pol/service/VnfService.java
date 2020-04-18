@@ -5,10 +5,8 @@ import org.jgrapht.DirectedGraph;
 import org.jgrapht.Graph;
 import org.jgrapht.traverse.RandomWalkIterator;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import py.una.pol.dto.*;
-import py.una.pol.util.Configurations;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,8 +25,10 @@ public class VnfService {
     public boolean placement() {
         ResultRandomPath resultRandomPath;
         Traffic traffic;
-        Integer energyCost, forwardingTrafficCost, hostSize, delayCost, deployCost, distance, hops, bandwidth, numberInstances,
-                loadTraffic, resourcesCost, maxUseLink, sloCost, throughput, licencesCost, fragmentation, allLinksCost;
+        int  hostSize, delayCost, deployCost, distance, hops, numberInstances,maxUseLink, throughput;
+        double energyCost, forwardingTrafficCost, bandwidth, loadTraffic, resourcesCost,
+                fragmentation, sloCost, allLinksCost, licencesCost;
+
         try {
             data.loadData();
             DirectedGraph<Node, Link> graph = data.graph;
@@ -41,7 +41,7 @@ public class VnfService {
             logger.info(" ");
 
             energyCost = fo.calculateEnergyCost(nodes, traffic.getNodeOrigin());
-            logger.info("Costo de Energia en dolares: " + energyCost);
+            logger.info("Costo de Energia total: " + energyCost);
 
             forwardingTrafficCost = fo.calculateForwardingTrafficCost(nodes, links, traffic.getNodeOrigin());
             logger.info("Costo de Reenvio de Trafico: " + forwardingTrafficCost);
@@ -73,14 +73,8 @@ public class VnfService {
             resourcesCost = fo.calculateResources(nodes);
             logger.info("Recursos total:" + resourcesCost);
 
-            maxUseLink = fo.calculateMaximunUseLink(links);
-            logger.info("Maxima uitlizacion del enlace: " + maxUseLink);
-
             sloCost = fo.calculateSLOCost(nodes,links, traffic.getPenaltyCostSLO(), traffic.getDelayMaxSLA());
             logger.info("Costo por SLO: " + sloCost);
-
-            throughput = fo.calculateThroughput(links);
-            logger.info("Throughput: " + throughput);
 
             licencesCost = fo.calculateLicencesCost(nodes);
             logger.info("Costo de licencia total: " + licencesCost);
@@ -90,6 +84,12 @@ public class VnfService {
 
             allLinksCost = fo.calculateAllLinkCost(links);
             logger.info("Costo de todos los enlaces: " + allLinksCost);
+
+            maxUseLink = fo.calculateMaximunUseLink(links);
+            logger.info("Maxima uitlizacion del enlace: " + maxUseLink);
+
+            throughput = fo.calculateThroughput(links);
+            logger.info("Throughput: " + throughput);
 
         } catch (Exception e) {
             logger.error("Error VNF placement: " + e.getMessage());
@@ -106,9 +106,8 @@ public class VnfService {
         Link linkToCopy,link;
         boolean validPath = false, validResources, reuseServer;
         Random random = new Random();
-        Integer bandwidtCurrent;
-        int indexSfc, cpuToUse, ramToUse, storageToUse, energyToUse;
-
+        double bandwidtCurrent;
+        int indexSfc, cpuToUse, ramToUse, storageToUse, energyToUse;;
         try {
             while (!validPath) {  // hasta encontrar una solucion factible
                 Node nodeOrigen = traffic.getNodeOrigin();
@@ -143,9 +142,9 @@ public class VnfService {
                             Vnf vnf = traffic.getSfc().getVnfs().get(indexSfc);       //Vnf del SFC del trafico
 
                             //Se calculan los recursos que seran utilizados
-                            cpuToUse = server.getResourceUsedCPU() + vnf.getResourceCPU();
-                            ramToUse = server.getResourseUsedRAM() + vnf.getResourceRAM();
-                            storageToUse = server.getResourseUsedStorage() + vnf.getResourceStorage();
+                            cpuToUse = server.getResourceCPUUsed() + vnf.getResourceCPU();
+                            ramToUse = server.getResourceRAMUsed() + vnf.getResourceRAM();
+                            storageToUse = server.getResourceStorageUsed() + vnf.getResourceStorage();
                             energyToUse = server.getEnergyUsed() + vnf.getResourceCPU() * server.getEnergyPerCoreWatts();
 
                             //Verificar la capacidad de cada recurso del Servicdor
@@ -153,12 +152,12 @@ public class VnfService {
                                     storageToUse < server.getResourceStorage() && energyToUse < server.getEnergyPeakWatts()) {
 
                                 //setear los recursos utilizados
-                                node.getServer().setResourceUsedCPU(cpuToUse);
-                                node.getServer().setResourseUsedRAM(ramToUse);
-                                node.getServer().setResourseUsedStorage(storageToUse);
+                                node.getServer().setResourceCPUUsed(cpuToUse);
+                                node.getServer().setResourceRAMUsed(ramToUse);
+                                node.getServer().setResourceStorageUsed(storageToUse);
                                 node.getServer().setEnergyUsed(energyToUse);
                                 node.getServer().getVnf().add(vnf);
-                                bandwidtCurrent = (int) (vnf.getBandwidthFactor() * Double.valueOf(bandwidtCurrent));
+                                bandwidtCurrent = vnf.getBandwidthFactor() * bandwidtCurrent;
 
                                 indexSfc++;
                             } else
@@ -235,10 +234,13 @@ public class VnfService {
             server.setResourceCPU(serverToCopy.getResourceCPU());
             server.setResourceRAM(serverToCopy.getResourceRAM());
             server.setResourceStorage(serverToCopy.getResourceStorage());
-            server.setResourceUsedCPU(serverToCopy.getResourceUsedCPU());
-            server.setResourseUsedRAM(serverToCopy.getResourseUsedRAM());
-            server.setResourseUsedStorage(serverToCopy.getResourseUsedStorage());
+            server.setResourceCPUUsed(serverToCopy.getResourceCPUUsed());
+            server.setResourceRAMUsed(serverToCopy.getResourceRAMUsed());
+            server.setResourceStorageUsed(serverToCopy.getResourceStorageUsed());
             server.setLicenceCost(serverToCopy.getLicenceCost());
+            server.setResourceCPUCost(serverToCopy.getResourceCPUCost());
+            server.setResourceRAMCost(serverToCopy.getResourceRAMCost());
+            server.setResourceStorageCost(serverToCopy.getResourceStorageCost());
             node.setServer(server);
         }
 
