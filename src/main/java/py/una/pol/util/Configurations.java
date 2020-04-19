@@ -5,9 +5,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.apache.log4j.Logger;
-import py.una.pol.dto.Node;
-import py.una.pol.dto.Server;
-import py.una.pol.dto.Vnf;
+import py.una.pol.dto.NFVdto.Node;
+import py.una.pol.dto.NFVdto.Server;
+import py.una.pol.dto.NFVdto.Vnf;
 
 import java.util.ArrayList;
 import java.util.List;

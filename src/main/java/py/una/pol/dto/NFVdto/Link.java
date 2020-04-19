@@ -1,4 +1,4 @@
-package py.una.pol.dto;
+package py.una.pol.dto.NFVdto;
 
 import lombok.Data;
 

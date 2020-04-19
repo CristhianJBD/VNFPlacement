@@ -7,6 +7,7 @@ import org.jgrapht.traverse.RandomWalkIterator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import py.una.pol.dto.*;
+import py.una.pol.dto.NFVdto.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,10 +41,10 @@ public class VnfService {
 
             logger.info(" ");
 
-            energyCost = fo.calculateEnergyCost(nodes, traffic.getNodeOrigin());
+            energyCost = fo.calculateEnergyCost(nodes);
             logger.info("Costo de Energia total: " + energyCost);
 
-            forwardingTrafficCost = fo.calculateForwardingTrafficCost(nodes, links, traffic.getNodeOrigin());
+            forwardingTrafficCost = fo.calculateForwardingTrafficCost(nodes, links);
             logger.info("Costo de Reenvio de Trafico: " + forwardingTrafficCost);
 
             hostSize = fo.calculateHostSize(nodes);
@@ -100,28 +101,40 @@ public class VnfService {
 
     private ResultRandomPath createRandomPath(Graph<Node, Link> graph, Traffic traffic) throws Exception {
         ResultRandomPath resultRandomPath = new ResultRandomPath();
+        Random random = new Random();
+        RandomWalkIterator randomWalkIterator;
+        ResultUseServer resultUseServer;
         List<Node> randomNodes = null;
         List<Link> randomLinks = null;
-        Node randomNode;
+        Node randomNode, nodeOrigen;
         Link linkToCopy,link;
-        boolean validPath = false, validResources, reuseServer;
-        Random random = new Random();
+        boolean validPath = false;
         double bandwidtCurrent;
-        int indexSfc, cpuToUse, ramToUse, storageToUse, energyToUse;;
+        int indexSfc;
         try {
-            while (!validPath) {  // hasta encontrar una solucion factible
-                Node nodeOrigen = traffic.getNodeOrigin();
-                RandomWalkIterator randomWalkIterator = new RandomWalkIterator<>(graph, nodeOrigen);
+            while (!validPath) {    // hasta encontrar una solucion factible
+                randomNodes = new ArrayList<>();randomLinks = new ArrayList<>();
+                nodeOrigen = traffic.getNodeOrigin();
                 bandwidtCurrent = traffic.getBandwidth();
-                randomNodes = new ArrayList<>();
-                randomLinks = new ArrayList<>();
-                indexSfc = 0; // indice de vnfs del sfc
+                indexSfc = 0;       // indice de vnfs del sfc
+
+                Node node = setNode(nodeOrigen);
+                if(random.nextBoolean()) {    // random para utilizar o no el nodo
+                    resultUseServer = useServer(nodeOrigen, bandwidtCurrent, traffic.getSfc().getVnfs(), indexSfc);
+
+                    node = resultUseServer.getNode();
+                    indexSfc = resultUseServer.getIndexSfc();
+                    bandwidtCurrent = resultUseServer.getBandwidtCurrent();
+                    validPath = resultUseServer.isValidPath();
+                }
+                randomNodes.add(node);
+
+                randomWalkIterator = new RandomWalkIterator<>(graph, nodeOrigen);
                 while (randomWalkIterator.hasNext()) {  //Hasta completar una ruta random
                     randomNode = (Node) randomWalkIterator.next();    //siguiente nodo random para la ruta
 
-                    if (randomNode.getId().equals(nodeOrigen.getId())) {
+                    if (randomNode.getId().equals(nodeOrigen.getId()))
                         break;  //salir cuando se repite el ultimo nodo
-                    }
 
                     linkToCopy = graph.getEdge(nodeOrigen, randomNode);  //enlace entre los nodos
                     if (linkToCopy.getBandwidth() < bandwidtCurrent) {  //Se verifica si el enlace tiene capacidad para el ancho de banda
@@ -133,44 +146,16 @@ public class VnfService {
                         randomLinks.add(link);
                     }
 
-                    reuseServer = true;
-                    validResources = true;
-                    Node node = setNode(randomNode);   // se setea el nodo aleatorio a otra instanacia de Nodo para que no remplace en el grafo
-                    Server server = node.getServer();  // Servidor del nodo elegido de forma aleatoria
-                    while (validResources && reuseServer && !validPath) {
-                        if (server != null) {
-                            Vnf vnf = traffic.getSfc().getVnfs().get(indexSfc);       //Vnf del SFC del trafico
+                    node = setNode(randomNode);   // se setea el nodo aleatorio a otra instanacia de Nodo para que no remplace en el grafo
+                    if(!validPath && random.nextBoolean()) {    // random para utilizar o no el nodo
+                        resultUseServer = useServer(node, bandwidtCurrent, traffic.getSfc().getVnfs(), indexSfc);
 
-                            //Se calculan los recursos que seran utilizados
-                            cpuToUse = server.getResourceCPUUsed() + vnf.getResourceCPU();
-                            ramToUse = server.getResourceRAMUsed() + vnf.getResourceRAM();
-                            storageToUse = server.getResourceStorageUsed() + vnf.getResourceStorage();
-                            energyToUse = server.getEnergyUsed() + vnf.getResourceCPU() * server.getEnergyPerCoreWatts();
-
-                            //Verificar la capacidad de cada recurso del Servicdor
-                            if (cpuToUse < server.getResourceCPU() && ramToUse < server.getResourceRAM() &&
-                                    storageToUse < server.getResourceStorage() && energyToUse < server.getEnergyPeakWatts()) {
-
-                                //setear los recursos utilizados
-                                node.getServer().setResourceCPUUsed(cpuToUse);
-                                node.getServer().setResourceRAMUsed(ramToUse);
-                                node.getServer().setResourceStorageUsed(storageToUse);
-                                node.getServer().setEnergyUsed(energyToUse);
-                                node.getServer().getVnf().add(vnf);
-                                bandwidtCurrent = vnf.getBandwidthFactor() * bandwidtCurrent;
-
-                                indexSfc++;
-                            } else
-                                validResources = false;   // cuando el servidor no cumple la capacidad de algun recurso
-
-                            if (indexSfc == traffic.getSfc().getVnfs().size()) { // se completaron los VNFs por lo tanto es valido el camino
-                                validPath = true;
-                            }
-                            reuseServer = random.nextBoolean();  //random para reutilizar el Servidor
-                        } else
-                            reuseServer = false;  // No existe servidor por lo tanto no se puede utilizar el nodo
-
+                        node = resultUseServer.getNode();
+                        indexSfc = resultUseServer.getIndexSfc();
+                        bandwidtCurrent = resultUseServer.getBandwidtCurrent();
+                        validPath = resultUseServer.isValidPath();
                     }
+
                     randomNodes.add(node);
                     nodeOrigen = randomNode;
                 }
@@ -183,6 +168,57 @@ public class VnfService {
             logger.error(e);
             throw new Exception();
         }
+    }
+
+    private ResultUseServer useServer (Node node, double bandwidtCurrent, List<Vnf> sfc, int indexSfc){
+        Random random = new Random();
+        Server server = node.getServer();    // Servidor del nodo elegido de forma aleatoria
+        boolean reuseServer = random.nextBoolean();             //random para utilizar o no el servidor
+        boolean validResources = true, validPath = false;
+        int cpuToUse, ramToUse, storageToUse, energyToUse;
+        ResultUseServer resultUseServer = new ResultUseServer();
+
+        while (validResources && reuseServer && !validPath) {
+            if (server != null) {
+                Vnf vnf = sfc.get(indexSfc);       //Vnf del SFC del trafico
+
+                //Se calculan los recursos que seran utilizados
+                cpuToUse = server.getResourceCPUUsed() + vnf.getResourceCPU();
+                ramToUse = server.getResourceRAMUsed() + vnf.getResourceRAM();
+                storageToUse = server.getResourceStorageUsed() + vnf.getResourceStorage();
+                energyToUse = server.getEnergyUsed() + vnf.getResourceCPU() * server.getEnergyPerCoreWatts();
+
+                //Verificar la capacidad de cada recurso del Servicdor
+                if (cpuToUse < server.getResourceCPU() && ramToUse < server.getResourceRAM() &&
+                        storageToUse < server.getResourceStorage() && energyToUse < server.getEnergyPeakWatts()) {
+
+                    //setear los recursos utilizados
+                    node.getServer().setResourceCPUUsed(cpuToUse);
+                    node.getServer().setResourceRAMUsed(ramToUse);
+                    node.getServer().setResourceStorageUsed(storageToUse);
+                    node.getServer().setEnergyUsed(energyToUse);
+                    node.getServer().getVnf().add(vnf);
+                    bandwidtCurrent = vnf.getBandwidthFactor() * bandwidtCurrent;
+
+                    indexSfc++;
+                } else
+                    validResources = false;   // cuando el servidor no cumple la capacidad de algun recurso
+
+                if (indexSfc == sfc.size()) { // se completaron los VNFs por lo tanto es valido el camino
+                    validPath = true;
+                }
+                reuseServer = random.nextBoolean();  //random para reutilizar el Servidor
+            } else
+                reuseServer = false;  // No existe servidor por lo tanto no se puede utilizar el nodo
+
+        }
+
+        resultUseServer.setBandwidtCurrent(bandwidtCurrent);
+        resultUseServer.setIndexSfc(indexSfc);
+        resultUseServer.setNode(node);
+        resultUseServer.setValidPath(validPath);
+        return resultUseServer;
+
     }
 
     private Traffic generateRandomtraffic(List<Node> nodes, List<Vnf> vnfs) throws Exception {

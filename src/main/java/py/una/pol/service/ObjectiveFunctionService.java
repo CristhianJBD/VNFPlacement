@@ -3,9 +3,9 @@ package py.una.pol.service;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import py.una.pol.dto.Link;
-import py.una.pol.dto.Node;
-import py.una.pol.dto.Vnf;
+import py.una.pol.dto.NFVdto.Link;
+import py.una.pol.dto.NFVdto.Node;
+import py.una.pol.dto.NFVdto.Vnf;
 import py.una.pol.util.Configurations;
 
 import java.util.List;
@@ -21,12 +21,9 @@ public class ObjectiveFunctionService {
     Costo de la Energia en Dolares = suma de los costos(dolares) de energia utilizados en los nodos mas
     la energia en watts utilizada en cada servidor por el costo de energia correspondiente al servidor
      */
-    public double calculateEnergyCost(List<Node> nodes, Node originNode) throws Exception {
-        double energyCost;
+    public double calculateEnergyCost(List<Node> nodes) throws Exception {
+        double energyCost = 0;
         try {
-            //Costo de energia consumida en el Nodo origen
-            energyCost = originNode.getEnergyCost();
-
             //Costo de energia consumida en el nodo mas energia consumida en el servidor donde se instalo el VNF
             for (Node node : nodes) {
                 if (node.getServer() != null)
@@ -48,11 +45,11 @@ public class ObjectiveFunctionService {
         Costo de Reenvio de trafico = suma del costo en dolar por el ancho de banda utilizado en cada enlace
         mas la energia total en dolares
      */
-    public double calculateForwardingTrafficCost(List<Node> nodes, List<Link> links, Node originNode) throws Exception {
+    public double calculateForwardingTrafficCost(List<Node> nodes, List<Link> links) throws Exception {
         double forwardingTrafficCost;
         try {
             //Energia Total en dolares
-            forwardingTrafficCost = calculateEnergyCost(nodes, originNode);
+            forwardingTrafficCost = calculateEnergyCost(nodes);
 
             //Ancho de banda de cada enlace por el costo en dolares por ancho de banda de cada enlace
             for (Link link : links)
