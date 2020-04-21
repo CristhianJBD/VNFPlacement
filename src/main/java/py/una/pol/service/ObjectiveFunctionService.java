@@ -8,7 +8,10 @@ import py.una.pol.dto.NFVdto.Node;
 import py.una.pol.dto.NFVdto.Vnf;
 import py.una.pol.util.Configurations;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class ObjectiveFunctionService {
@@ -231,7 +234,7 @@ public class ObjectiveFunctionService {
         try {
             //Suma del ancho de banda de cada enlace de la ruta
             for (Link link : links)
-                bandwidth = bandwidth + link.getBandwidth();
+                bandwidth = bandwidth + link.getBandwidthUsed();
 
             return bandwidth;
         } catch (Exception e) {
@@ -246,7 +249,7 @@ public class ObjectiveFunctionService {
         try {
             //suma del costo unitario * Ancho de banda requerido
             for (Link link : links)
-                linksCost = linksCost + link.getBandwidth() * link.getBandwidthCost();
+                linksCost = linksCost + link.getBandwidthUsed() * link.getBandwidthCost();
 
             return linksCost;
         } catch (Exception e) {
@@ -266,8 +269,9 @@ public class ObjectiveFunctionService {
 
             //Ancho de Banda total
             for (Link link : links)
-                bandwidth = bandwidth + link.getBandwidth();
+                bandwidth = bandwidth + link.getBandwidthUsed();
 
+            //anchi de banda total por delay total
             loadTraffic = bandwidth * delayTotal;
             return loadTraffic;
         } catch (Exception e) {
@@ -291,12 +295,18 @@ public class ObjectiveFunctionService {
         }
     }
 
-    //Como calcular la maxima utlizacion del enlace?
-    public int calculateMaximunUseLink(List<Link> links) throws Exception {
-        int maximunUseLink = 0;
+    //Verificar formula?
+    public double calculateMaximunUseLink(List<Link> links) throws Exception {
+        double maximunUseLink;
+        List<Double> bandwidths = new ArrayList<>();
         try {
-            for (Link link : links) {
-            }
+            for(Link link : links)
+                bandwidths.add(link.getBandwidthUsed());
+
+            List<Double> sortedList = bandwidths.stream().sorted(Comparator.reverseOrder()).collect(Collectors.toList());
+
+            //Máx ancho de banda de entre todos los enlaces.
+            maximunUseLink = sortedList.get(0);
             return maximunUseLink;
         } catch (Exception e) {
             logger.error("Error al calcular la maxima utilizacion del enlace: " + e.getMessage());
@@ -305,7 +315,7 @@ public class ObjectiveFunctionService {
     }
 
 
-    //Seria lo mismo que calcular el ancho de banda?
+    //Formula? necesita flujos?
     public int calculateThroughput(List<Link> links) throws Exception {
         int throughput = 0;
         try {

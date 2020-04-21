@@ -28,10 +28,12 @@ public class Configurations {
     private String separator;
     @Value("${matrix.name}")
     private String matrixName;
+    @Value("${number.solutions}")
+    private Integer numberSolutions;
 
     //VNF
     @Value("${vnf.size}")
-    private Long vnfSize;
+    private Integer vnfSize;
     @Value("${vnf.id}")
     private String vnfId;
     @Value("${vnf.delay}")
@@ -51,7 +53,7 @@ public class Configurations {
 
     //Servidor
     @Value("${server.size}")
-    private Long serverSize;
+    private Integer serverSize;
     @Value("${server.id}")
     private String serverId;
     @Value("${server.licence.cost}")
@@ -85,7 +87,7 @@ public class Configurations {
 
     //Nodo
     @Value("${node.size}")
-    private Long nodeSize;
+    private Integer nodeSize;
     @Value("${node.id}")
     private String nodeId;
     @Value("${node.energy.cost}")

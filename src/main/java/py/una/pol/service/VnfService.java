@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import py.una.pol.dto.*;
 import py.una.pol.dto.NFVdto.*;
+import py.una.pol.util.Configurations;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,13 +23,17 @@ public class VnfService {
     private DataService data;
     @Autowired
     private ObjectiveFunctionService fo;
+    @Autowired
+    private Configurations conf;
 
     public boolean placement() {
         ResultRandomPath resultRandomPath;
+        List<Node> nodes; List<Link> links;
+        ObjectiveFunctionsSolutions solutions = new ObjectiveFunctionsSolutions();
         Traffic traffic;
-        int  hostSize, delayCost, deployCost, distance, hops, numberInstances,maxUseLink, throughput;
+        int  hostSize, delayCost, deployCost, distance, hops, numberInstances, throughput;
         double energyCost, forwardingTrafficCost, bandwidth, loadTraffic, resourcesCost,
-                fragmentation, sloCost, allLinksCost, licencesCost;
+                fragmentation, sloCost, allLinksCost, licencesCost, maxUseLink;
 
         try {
             data.loadData();
@@ -36,8 +41,8 @@ public class VnfService {
             traffic = generateRandomtraffic(data.nodes, data.vnfs);
 
             resultRandomPath = createRandomPath(graph, traffic);
-            List<Node> nodes = resultRandomPath.getRandomNodes();
-            List<Link> links = resultRandomPath.getRandomLinks();
+            nodes = resultRandomPath.getRandomNodes();
+            links = resultRandomPath.getRandomLinks();
 
             logger.info(" ");
 
@@ -91,6 +96,33 @@ public class VnfService {
 
             throughput = fo.calculateThroughput(links);
             logger.info("Throughput: " + throughput);
+
+            for(int i=0 ; i< conf.getNumberSolutions(); i++){
+                traffic = generateRandomtraffic(data.nodes, data.vnfs);
+                resultRandomPath = createRandomPath(graph, traffic);
+                nodes = resultRandomPath.getRandomNodes();
+                links = resultRandomPath.getRandomLinks();
+
+                solutions.getEnergyCostList().add(fo.calculateEnergyCost(nodes));
+                solutions.getForwardingTrafficCostList().add(fo.calculateForwardingTrafficCost(nodes, links));
+                solutions.getHostSizeList().add(fo.calculateHostSize(nodes));
+                solutions.getDelayCostList().add(fo.calculateDelayTotal(nodes, links));
+                solutions.getDeployCostList().add(fo.calculateDeployCost(nodes));
+                solutions.getDistanceList().add(fo.calculateDistance(links));
+                solutions.getHopsList().add(fo.calculateHops(links));
+                solutions.getBandwidthList().add(fo.calculateBandwidth(links));
+                solutions.getNumberInstancesList().add(fo.calculateNumberIntances(nodes));
+                solutions.getLoadTrafficList().add(fo.calculateLoadTraffic(nodes, links));
+                solutions.getResourcesCostList().add(fo.calculateResources(nodes));
+                solutions.getSloCostList().add(fo.calculateSLOCost(nodes,links, traffic.getPenaltyCostSLO(), traffic.getDelayMaxSLA()));
+                solutions.getLicencesCostList().add(fo.calculateLicencesCost(nodes));
+                solutions.getFragmentationList().add(fo.calculateResourceFragmentation(nodes,links));
+                solutions.getAllLinksCostList().add(fo.calculateAllLinkCost(links));
+                solutions.getMaxUseLinkList().add(fo.calculateMaximunUseLink(links));
+                solutions.getThroughputList().add(fo.calculateThroughput(links));
+            }
+
+            logger.info(solutions.toString());
 
         } catch (Exception e) {
             logger.error("Error VNF placement: " + e.getMessage());
@@ -222,18 +254,19 @@ public class VnfService {
     }
 
     private Traffic generateRandomtraffic(List<Node> nodes, List<Vnf> vnfs) throws Exception {
+        Random rn = new Random();
         try {
             Traffic traffic = new Traffic();
-            traffic.setBandwidth(300);
-            traffic.setDelayMaxSLA(3);
+            traffic.setBandwidth(rn.nextInt(200) + 100);
+            traffic.setDelayMaxSLA(rn.nextInt(35) + 1);
             traffic.setNodeDestiny(nodes.get(5));
             traffic.setNodeOrigin(nodes.get(0));
-            traffic.setPenaltyCostSLO(4);
+            traffic.setPenaltyCostSLO(rn.nextInt(5) + 1);
 
             SFC sfc = new SFC();
-            sfc.getVnfs().add(vnfs.get(0));
-            sfc.getVnfs().add(vnfs.get(2));
-            sfc.getVnfs().add(vnfs.get(4));
+            sfc.getVnfs().add(vnfs.get(rn.nextInt(5)));
+            sfc.getVnfs().add(vnfs.get(rn.nextInt(5)));
+            sfc.getVnfs().add(vnfs.get(rn.nextInt(5)));
             traffic.setSfc(sfc);
 
             return traffic;
