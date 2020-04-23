@@ -65,12 +65,13 @@ public class ObjectiveFunctionService {
         }
     }
 
+
     public int calculateHostSize(List<Node> nodes) throws Exception {
         int hostSize = 0;
         try {
             //Numero de Servidores utilizados para instalar un VNF
             for (Node node : nodes)
-                if (node.getServer() != null)
+                if (node.getServer() != null && node.getServer().getVnf()!= null)
                     hostSize = hostSize + 1;
 
             return hostSize;
