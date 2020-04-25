@@ -44,6 +44,7 @@ public class VnfService {
             nodes = resultRandomPath.getRandomNodes();
             links = resultRandomPath.getRandomLinks();
 
+            logger.info("Valores de la Solucion");
             logger.info("Trafico: ");
             logger.info(traffic);
 
@@ -51,7 +52,7 @@ public class VnfService {
             for(Node nodePrint : nodes)
                 logger.info(nodePrint);
 
-            logger.info("Enlace de la Solucion: ");
+            logger.info("Enlaces de la Solucion: ");
             for(Link linkPrint : links)
                 logger.info(linkPrint);
 
