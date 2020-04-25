@@ -25,13 +25,14 @@ public class Link {
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("Link: ");
-        sb.append("id=").append(id);
+        final StringBuilder sb = new StringBuilder("Link{");
+        sb.append("id='").append(id).append('\'');
         sb.append(", delay=").append(delay);
         sb.append(", distance=").append(distance);
         sb.append(", bandwidth=").append(bandwidth);
         sb.append(", bandwidthCost=").append(bandwidthCost);
         sb.append(", bandwidthUsed=").append(bandwidthUsed);
+        sb.append('}');
         return sb.toString();
     }
 }

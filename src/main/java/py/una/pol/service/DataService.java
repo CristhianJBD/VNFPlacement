@@ -28,6 +28,7 @@ public class DataService {
     public List<Vnf> vnfs = new ArrayList<>();
     public List<Server> servers = new ArrayList<>();
     public List<Node> nodes = new ArrayList<>();
+    public List<Link> links = new ArrayList<>();
     private int[][] delay;
     private int[][] distance;
     private double[][] bandwidthCost;
@@ -37,6 +38,7 @@ public class DataService {
 
     public void loadData() {
         try {
+            logger.info("Valores iniciales: ");
             loadVnfs();
             loadServers();
             loadNodes();
@@ -52,6 +54,7 @@ public class DataService {
     private void loadVnfs() throws Exception {
         Vnf vnf;
         String separator = configuration.getSeparator();
+        logger.info("VNFs: ");
         try {
             String[] ids = configuration.getVnfId().split(separator);
             String[] delays = configuration.getVnfDelay().split(separator);
@@ -90,6 +93,7 @@ public class DataService {
     private void loadServers() throws Exception {
         Server server;
         String separator = configuration.getSeparator();
+        logger.info("Servidores: ");
         try {
             String[] ids = configuration.getServerId().split(separator);
             String[] licences = configuration.getServerLicenceCost().split(separator);
@@ -134,6 +138,7 @@ public class DataService {
     private void loadNodes() throws Exception {
         Node node;
         String separator = configuration.getSeparator();
+        logger.info("Nodos: ");
         try {
             String[] ids = configuration.getNodeId().split(separator);
             String[] energyCosts = configuration.getNodeEnergyCost().split(separator);
@@ -173,6 +178,7 @@ public class DataService {
 
 
     private void readFile() throws Exception {
+        logger.info("Matrices: ");
         try {
             BufferedReader reader;
             reader = new BufferedReader(new FileReader(System.getProperty("app.home") + configuration.getMatrixName()));
@@ -246,7 +252,7 @@ public class DataService {
             for (int i = 0; i < configuration.getNodeSize(); i++) {
                 graph.addVertex(nodes.get(i));
             }
-
+            logger.info("Enlaces: ");
             for (int i = 0; i < configuration.getNodeSize(); i++) {
                 for (int j = 0; j < configuration.getNodeSize(); j++) {
                     if (!matrixNodes[i][j].equals(Constants.ZERO)) {
@@ -256,10 +262,16 @@ public class DataService {
                         link.setBandwidthCost(bandwidthCost[i][j]);
                         link.setDelay(delay[i][j]);
                         link.setDistance(distance[i][j]);
+
+                        links.add(link);
+                        logger.info(link.toString());
+
                         graph.addEdge(nodes.get(i),nodes.get(j),link);
                     }
                 }
             }
+            logger.info("Grafo: ");
+            logger.info(graph.toString());
         }catch (Exception e){
             logger.error("Error al cargar el Grafo: " + e.getMessage());
             throw new Exception();

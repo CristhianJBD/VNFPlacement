@@ -44,7 +44,18 @@ public class VnfService {
             nodes = resultRandomPath.getRandomNodes();
             links = resultRandomPath.getRandomLinks();
 
-            logger.info(" ");
+            logger.info("Trafico: ");
+            logger.info(traffic);
+
+            logger.info("Nodos de las Solucion: ");
+            for(Node nodePrint : nodes)
+                logger.info(nodePrint);
+
+            logger.info("Enlace de la Solucion: ");
+            for(Link linkPrint : links)
+                logger.info(linkPrint);
+
+            logger.info("Funciones Objetivos con sus resultados: ");
 
             energyCost = fo.calculateEnergyCost(nodes);
             logger.info("Costo de Energia total: " + energyCost);
@@ -97,6 +108,8 @@ public class VnfService {
             throughput = fo.calculateThroughput(links);
             logger.info("Throughput: " + throughput);
 
+
+            logger.info("Soluciones: ");
             for(int i=0 ; i< conf.getNumberSolutions(); i++){
                 traffic = generateRandomtraffic(data.nodes, data.vnfs);
                 resultRandomPath = createRandomPath(graph, traffic);

@@ -57,11 +57,11 @@ public class Server {
     private int energyUsed;
 
 
-
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("Server: ");
+        final StringBuilder sb = new StringBuilder("Server{");
         sb.append("id='").append(id).append('\'');
+        sb.append(", vnf=").append(vnf);
         sb.append(", licenceCost=").append(licenceCost);
         sb.append(", energyCost=").append(energyCost);
         sb.append(", resourceCPU=").append(resourceCPU);
@@ -70,11 +70,13 @@ public class Server {
         sb.append(", resourceCPUCost=").append(resourceCPUCost);
         sb.append(", resourceRAMCost=").append(resourceRAMCost);
         sb.append(", resourceStorageCost=").append(resourceStorageCost);
-        sb.append(", energyIdleWatts=").append(energyPerCoreWatts);
+        sb.append(", energyPerCoreWatts=").append(energyPerCoreWatts);
+        sb.append(", energyPeakWatts=").append(energyPeakWatts);
         sb.append(", resourceRAMUsed=").append(resourceRAMUsed);
         sb.append(", resourceStorageUsed=").append(resourceStorageUsed);
         sb.append(", resourceCPUUsed=").append(resourceCPUUsed);
         sb.append(", energyUsed=").append(energyUsed);
+        sb.append('}');
         return sb.toString();
     }
 }

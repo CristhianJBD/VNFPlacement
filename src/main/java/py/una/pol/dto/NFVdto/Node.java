@@ -16,9 +16,9 @@ public class Node {
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("Node: ");
+        final StringBuilder sb = new StringBuilder("Node:");
         sb.append("id='").append(id).append('\'');
-        sb.append(", server=").append(server!=null?server.getId():null);
+        sb.append(", server=").append(server);
         sb.append(", energyCost=").append(energyCost);
         return sb.toString();
     }

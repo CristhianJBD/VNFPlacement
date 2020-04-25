@@ -30,7 +30,7 @@ public class Vnf {
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("Vnf: ");
+        final StringBuilder sb = new StringBuilder("Vnf{");
         sb.append("id='").append(id).append('\'');
         sb.append(", delay=").append(delay);
         sb.append(", deploy=").append(deploy);
@@ -39,6 +39,7 @@ public class Vnf {
         sb.append(", resourceStorage=").append(resourceStorage);
         sb.append(", licenceCost=").append(licenceCost);
         sb.append(", bandwidthFactor=").append(bandwidthFactor);
+        sb.append('}');
         return sb.toString();
     }
 }
