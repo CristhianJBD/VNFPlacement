@@ -46,13 +46,15 @@ public class ObjectiveFunctionService {
 
     /*
         Costo de Reenvio de trafico = suma del costo en dolar por el ancho de banda utilizado en cada enlace
-        mas la energia total en dolares
+        mas la energia consumida en los nodos en dolares
      */
     public double calculateForwardingTrafficCost(List<Node> nodes, List<Link> links) throws Exception {
-        double forwardingTrafficCost;
+        double forwardingTrafficCost = 0;
         try {
-            //Energia Total en dolares
-            forwardingTrafficCost = calculateEnergyCost(nodes);
+            //Costo de energia consumida en los nodos en dolares
+            for (Node node : nodes)
+                if (node.getServer() != null)
+                    forwardingTrafficCost = forwardingTrafficCost + node.getEnergyCost();
 
             //Ancho de banda de cada enlace por el costo en dolares por ancho de banda de cada enlace
             for (Link link : links)
