@@ -30,6 +30,16 @@ public class Configurations {
     private String matrixName;
     @Value("${number.solutions}")
     private Integer numberSolutions;
+    @Value("${k.shortest}")
+    private Integer k;
+    @Value("${retries.solution}")
+    private Integer retriesSolution;
+    @Value("${percentage.utilization.resource}")
+    private Integer percentageUtilResource;
+    @Value("${percentage.utilization.energy}")
+    private Integer percentageUtilEnergy;
+    @Value("${percentage.utilization.bandwidth}")
+    private Integer percentageUtilBandwidth;
 
     //VNF
     @Value("${vnf.size}")

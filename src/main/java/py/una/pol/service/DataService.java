@@ -1,29 +1,27 @@
 package py.una.pol.service;
 
 import org.apache.log4j.Logger;
-import org.jgrapht.DirectedGraph;
-import org.jgrapht.graph.DefaultDirectedGraph;
+import org.jgrapht.Graph;
+import org.jgrapht.GraphPath;
+import org.jgrapht.alg.shortestpath.KShortestPaths;
+import org.jgrapht.graph.SimpleGraph;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-import py.una.pol.dto.NFVdto.Link;
-import py.una.pol.dto.NFVdto.Node;
-import py.una.pol.dto.NFVdto.Server;
-import py.una.pol.dto.NFVdto.Vnf;
+import org.springframework.stereotype.Service;
+import py.una.pol.dto.ShortestPath;
+import py.una.pol.dto.NFVdto.*;
 import py.una.pol.util.Configurations;
 import py.una.pol.util.Constants;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
-@Component()
+@Service()
 public class DataService {
     Logger logger = Logger.getLogger(DataService.class);
 
     @Autowired
-    private Configurations configuration;
+    private Configurations conf;
 
     public List<Vnf> vnfs = new ArrayList<>();
     public List<Server> servers = new ArrayList<>();
@@ -34,7 +32,8 @@ public class DataService {
     private double[][] bandwidthCost;
     private double[][] bandwidth;
     private String[][] matrixNodes;
-    DirectedGraph<Node, Link> graph = new DefaultDirectedGraph<>(Link.class);
+    Graph<Node, Link> graph = new SimpleGraph<>(Link.class);
+    Map<String, List<ShortestPath>> shortestPathMap = new HashMap<>();
 
     public void loadData() {
         try {
@@ -44,8 +43,9 @@ public class DataService {
             loadNodes();
             readFile();
             loadGraph();
+            kShortestPath();
 
-        }catch (Exception e){
+        } catch (Exception e) {
             logger.error("Error al cargar los datos: " + e.getMessage());
         }
     }
@@ -53,35 +53,35 @@ public class DataService {
 
     private void loadVnfs() throws Exception {
         Vnf vnf;
-        String separator = configuration.getSeparator();
+        String separator = conf.getSeparator();
         logger.info("VNFs: ");
         try {
-            String[] ids = configuration.getVnfId().split(separator);
-            String[] delays = configuration.getVnfDelay().split(separator);
-            String[] deploys = configuration.getVnfDeploy().split(separator);
-            String[] cpus = configuration.getVnfResourceCPU().split(separator);
-            String[] rams = configuration.getVnfResourceRAM().split(separator);
-            String[] storages = configuration.getVnfResourceStorage().split(separator);
-            String[] licences = configuration.getVnfLicenceCost().split(separator);
-            String[] bandwidthFactor = configuration.getVnfBandwidthFactor().split(separator);
+            String[] ids = conf.getVnfId().split(separator);
+            String[] delays = conf.getVnfDelay().split(separator);
+            String[] deploys = conf.getVnfDeploy().split(separator);
+            String[] cpus = conf.getVnfResourceCPU().split(separator);
+            String[] rams = conf.getVnfResourceRAM().split(separator);
+            String[] storages = conf.getVnfResourceStorage().split(separator);
+            String[] licences = conf.getVnfLicenceCost().split(separator);
+            String[] bandwidthFactor = conf.getVnfBandwidthFactor().split(separator);
 
-            for (int i = 0; i < configuration.getVnfSize(); i++) {
+            for (int i = 0; i < conf.getVnfSize(); i++) {
                 vnf = new Vnf();
                 vnf.setId(ids[i]);
-                vnf.setDelay(Integer.valueOf(delays[i]));
-                vnf.setDeploy(Integer.valueOf(deploys[i]));
-                vnf.setResourceCPU(Integer.valueOf(cpus[i]));
-                vnf.setResourceRAM(Integer.valueOf(rams[i]));
-                vnf.setResourceStorage(Integer.valueOf(storages[i]));
-                vnf.setLicenceCost(Integer.valueOf(licences[i]));
-                vnf.setBandwidthFactor(Double.valueOf(bandwidthFactor[i]));
+                vnf.setDelay(Integer.parseInt(delays[i]));
+                vnf.setDeploy(Integer.parseInt(deploys[i]));
+                vnf.setResourceCPU(Integer.parseInt(cpus[i]));
+                vnf.setResourceRAM(Integer.parseInt(rams[i]));
+                vnf.setResourceStorage(Integer.parseInt(storages[i]));
+                vnf.setLicenceCost(Integer.parseInt(licences[i]));
+                vnf.setBandwidthFactor(Double.parseDouble(bandwidthFactor[i]));
 
                 logger.info(vnf.toString());
                 vnfs.add(vnf);
             }
 
         } catch (NumberFormatException e) {
-            logger.error("Error al parsear los datos de los VNFs: "+ e.getMessage());
+            logger.error("Error al parsear los datos de los VNFs: " + e.getMessage());
             throw new Exception();
         } catch (Exception e) {
             logger.error("Error al cargar los datos de los VNFs:" + e.getMessage());
@@ -92,34 +92,34 @@ public class DataService {
 
     private void loadServers() throws Exception {
         Server server;
-        String separator = configuration.getSeparator();
+        String separator = conf.getSeparator();
         logger.info("Servidores: ");
         try {
-            String[] ids = configuration.getServerId().split(separator);
-            String[] licences = configuration.getServerLicenceCost().split(separator);
-            String[] energyCosts = configuration.getServerEnergyCost().split(separator);
-            String[] cpus = configuration.getServerResourceCPU().split(separator);
-            String[] rams = configuration.getServerResourceRAM().split(separator);
-            String[] storages = configuration.getServerResourceStorage().split(separator);
-            String[] cpusCost = configuration.getServerResourceCPUCost().split(separator);
-            String[] ramsCost = configuration.getServerResourceRAMCost().split(separator);
-            String[] storagesCost = configuration.getServerResourceStorageCost().split(separator);
-            String[] energyPerCore = configuration.getServerEnergyPerCoreWatts().split(separator);
-            String[] energyPeaks = configuration.getServerEnergyPeakWatts().split(separator);
+            String[] ids = conf.getServerId().split(separator);
+            String[] licences = conf.getServerLicenceCost().split(separator);
+            String[] energyCosts = conf.getServerEnergyCost().split(separator);
+            String[] cpus = conf.getServerResourceCPU().split(separator);
+            String[] rams = conf.getServerResourceRAM().split(separator);
+            String[] storages = conf.getServerResourceStorage().split(separator);
+            String[] cpusCost = conf.getServerResourceCPUCost().split(separator);
+            String[] ramsCost = conf.getServerResourceRAMCost().split(separator);
+            String[] storagesCost = conf.getServerResourceStorageCost().split(separator);
+            String[] energyPerCore = conf.getServerEnergyPerCoreWatts().split(separator);
+            String[] energyPeaks = conf.getServerEnergyPeakWatts().split(separator);
 
-            for (int i = 0; i < configuration.getServerSize(); i++) {
+            for (int i = 0; i < conf.getServerSize(); i++) {
                 server = new Server();
                 server.setId(ids[i]);
-                server.setLicenceCost(Integer.valueOf(licences[i]));
-                server.setEnergyCost(Double.valueOf(energyCosts[i]));
-                server.setResourceCPU(Integer.valueOf(cpus[i]));
-                server.setResourceRAM(Integer.valueOf(rams[i]));
-                server.setResourceStorage(Integer.valueOf(storages[i]));
-                server.setResourceCPUCost(Double.valueOf(cpusCost[i]));
-                server.setResourceRAMCost(Double.valueOf(ramsCost[i]));
-                server.setResourceStorageCost(Double.valueOf(storagesCost[i]));
-                server.setEnergyPerCoreWatts(Integer.valueOf(energyPerCore[i]));
-                server.setEnergyPeakWatts(Integer.valueOf(energyPeaks[i]));
+                server.setLicenceCost(Integer.parseInt(licences[i]));
+                server.setEnergyCost(Double.parseDouble(energyCosts[i]));
+                server.setResourceCPU(Integer.parseInt(cpus[i]));
+                server.setResourceRAM(Integer.parseInt(rams[i]));
+                server.setResourceStorage(Integer.parseInt(storages[i]));
+                server.setResourceCPUCost(Double.parseDouble(cpusCost[i]));
+                server.setResourceRAMCost(Double.parseDouble(ramsCost[i]));
+                server.setResourceStorageCost(Double.parseDouble(storagesCost[i]));
+                server.setEnergyPerCoreWatts(Integer.parseInt(energyPerCore[i]));
+                server.setEnergyPeakWatts(Integer.parseInt(energyPeaks[i]));
 
                 logger.info(server.toString());
                 servers.add(server);
@@ -137,17 +137,17 @@ public class DataService {
 
     private void loadNodes() throws Exception {
         Node node;
-        String separator = configuration.getSeparator();
+        String separator = conf.getSeparator();
         logger.info("Nodos: ");
         try {
-            String[] ids = configuration.getNodeId().split(separator);
-            String[] energyCosts = configuration.getNodeEnergyCost().split(separator);
-            String[] nodeServer = configuration.getNodeServer().split(separator);
+            String[] ids = conf.getNodeId().split(separator);
+            String[] energyCosts = conf.getNodeEnergyCost().split(separator);
+            String[] nodeServer = conf.getNodeServer().split(separator);
 
-            for (int i = 0; i < configuration.getNodeSize(); i++) {
+            for (int i = 0; i < conf.getNodeSize(); i++) {
                 node = new Node();
                 node.setId(ids[i]);
-                node.setEnergyCost(Double.valueOf(energyCosts[i]));
+                node.setEnergyCost(Double.parseDouble(energyCosts[i]));
                 node.setServer(getServer(nodeServer[i]));
 
                 logger.info(node.toString());
@@ -158,7 +158,7 @@ public class DataService {
             logger.error("Error al parsear los datos de los Nodos: " + e.getMessage());
             throw new Exception();
         } catch (Exception e) {
-            logger.error("Error al cargar los datos de los Nodos: " +  e.getMessage());
+            logger.error("Error al cargar los datos de los Nodos: " + e.getMessage());
             throw new Exception();
         }
     }
@@ -181,7 +181,7 @@ public class DataService {
         logger.info("Matrices: ");
         try {
             BufferedReader reader;
-            reader = new BufferedReader(new FileReader(System.getProperty("app.home") + configuration.getMatrixName()));
+            reader = new BufferedReader(new FileReader(System.getProperty("app.home") + conf.getMatrixName()));
 
             int size = Integer.parseInt(reader.readLine());
             logger.info("Cantidad de nodos: " + size);
@@ -225,7 +225,7 @@ public class DataService {
                 String[] line = reader.readLine().split(" ");
 
                 for (int j = 0; j < size; j++) {
-                    bandwidth[i][j] = Double.valueOf(line[j]);
+                    bandwidth[i][j] = Double.parseDouble(line[j]);
                 }
             }
             logger.info(Arrays.deepToString(bandwidth));
@@ -236,11 +236,11 @@ public class DataService {
                 String[] line = reader.readLine().split(" ");
 
                 for (int j = 0; j < size; j++) {
-                    bandwidthCost[i][j] = Double.valueOf(line[j]);
+                    bandwidthCost[i][j] = Double.parseDouble(line[j]);
                 }
             }
             logger.info(Arrays.deepToString(bandwidthCost));
-        }catch (Exception e) {
+        } catch (Exception e) {
             logger.error("Error al cargar las matrices: " + e.getMessage());
             throw new Exception();
         }
@@ -249,15 +249,15 @@ public class DataService {
     private void loadGraph() throws Exception {
         Link link;
         try {
-            for (int i = 0; i < configuration.getNodeSize(); i++) {
+            for (int i = 0; i < conf.getNodeSize(); i++) {
                 graph.addVertex(nodes.get(i));
             }
             logger.info("Enlaces: ");
-            for (int i = 0; i < configuration.getNodeSize(); i++) {
-                for (int j = 0; j < configuration.getNodeSize(); j++) {
+            for (int i = 0; i < conf.getNodeSize(); i++) {
+                for (int j = 0; j < conf.getNodeSize(); j++) {
                     if (!matrixNodes[i][j].equals(Constants.ZERO)) {
                         link = new Link();
-                        link.setId(nodes.get(i).getId()+"-"+nodes.get(j).getId());
+                        link.setId(nodes.get(i).getId() + "-" + nodes.get(j).getId());
                         link.setBandwidth(bandwidth[i][j]);
                         link.setBandwidthCost(bandwidthCost[i][j]);
                         link.setDelay(delay[i][j]);
@@ -266,14 +266,54 @@ public class DataService {
                         links.add(link);
                         logger.info(link.toString());
 
-                        graph.addEdge(nodes.get(i),nodes.get(j),link);
+                        graph.addEdge(nodes.get(i), nodes.get(j), link);
                     }
                 }
             }
             logger.info("Grafo: ");
             logger.info(graph.toString());
-        }catch (Exception e){
+        } catch (Exception e) {
             logger.error("Error al cargar el Grafo: " + e.getMessage());
+            throw new Exception();
+        }
+    }
+
+    //Obtiene los k caminos mas cortos(por cantidad de saltos), de cada par de nodos
+    private void kShortestPath() throws Exception {
+        try {
+            KShortestPaths<Node, Link> pathInspector =
+                    new KShortestPaths<>(graph, conf.getK(), Integer.MAX_VALUE);
+            List<GraphPath<Node, Link>> paths;
+            List<ShortestPath> kShortestPath;
+            String nodeString, linkString;
+            for (Node origin : nodes)
+                for (Node destiny : nodes) {
+                    if (!origin.equals(destiny)) {
+                        kShortestPath = new ArrayList<>();
+                        //Obtiene los k caminos mas cortos entre dos pares de nodos
+                        paths = pathInspector.getPaths(origin, destiny);
+                        for(GraphPath<Node, Link> path : paths){
+                            ShortestPath shortestPath = new ShortestPath();
+                            // Guarda el ID de la lista de nodos de los k caminos mas cortos
+                            for(Node node : path.getVertexList()){
+                                nodeString = node.getId();
+                                shortestPath.getNodes().add(nodeString);
+                            }
+                            // Guarda el ID de la lista de enlaces de los k caminos mas cortos
+                            for(Link link : path.getEdgeList()){
+                                linkString = link.getId();
+                                shortestPath.getLinks().add(linkString);
+                            }
+                            kShortestPath.add(shortestPath);
+                        }
+                        //Se guarda en un Map los k caminos mas cortos de cada para de nodos del grafo
+                        // donde el key es el origenId - destinoId
+                        shortestPathMap.put(origin.getId() + "-" + destiny.getId(), kShortestPath);
+                    }
+                }
+
+        } catch (Exception e) {
+            logger.error("Error al cargar kShortestPath: " + e.getMessage());
             throw new Exception();
         }
     }

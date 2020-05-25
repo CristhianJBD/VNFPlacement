@@ -7,13 +7,13 @@ import py.una.pol.dto.NFVdto.Node;
 import java.util.List;
 
 @Data
-public class ResultRandomPath {
+public class ResultPath {
 
     //Lista de nodos aleatorios
-    List<Node> randomNodes;
+    List<Node> nodes;
 
     //Lista de enlaces aleatorios
-    List<Link> randomLinks;
+    List<Link> links;
 
 
 }
