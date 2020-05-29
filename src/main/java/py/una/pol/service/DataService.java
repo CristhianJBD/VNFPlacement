@@ -257,7 +257,8 @@ public class DataService {
                 for (int j = 0; j < conf.getNodeSize(); j++) {
                     if (!matrixNodes[i][j].equals(Constants.ZERO)) {
                         link = new Link();
-                        link.setId(nodes.get(i).getId() + "-" + nodes.get(j).getId());
+                        link.setId(nodes.get(i).getId() + "-" + nodes.get(j).getId() +
+                                "/" + nodes.get(j).getId() + "-" + nodes.get(i).getId());
                         link.setBandwidth(bandwidth[i][j]);
                         link.setBandwidthCost(bandwidthCost[i][j]);
                         link.setDelay(delay[i][j]);
