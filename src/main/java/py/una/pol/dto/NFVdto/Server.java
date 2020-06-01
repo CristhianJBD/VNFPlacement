@@ -56,6 +56,27 @@ public class Server {
     //Energia utilizada
     private int energyUsed;
 
+    public Server() {
+    }
+
+    public Server(Server server) {
+        this.id = server.getId();
+        this.vnf = server.getVnf();
+        this.licenceCost = server.getLicenceCost();
+        this.energyCost = server.getEnergyCost();
+        this.resourceCPU = server.getResourceCPU();
+        this.resourceRAM = server.getResourceRAM();
+        this.resourceStorage = server.getResourceStorage();
+        this.resourceCPUCost = server.getResourceCPUCost();
+        this.resourceRAMCost = server.getResourceRAMCost();
+        this.resourceStorageCost = server.getResourceStorageCost();
+        this.energyPerCoreWatts = server.getEnergyPerCoreWatts();
+        this.energyPeakWatts = server.getEnergyPeakWatts();
+        this.resourceRAMUsed = server.getResourceRAMUsed();
+        this.resourceStorageUsed = server.getResourceStorageUsed();
+        this.resourceCPUUsed = server.getResourceCPUUsed();
+        this.energyUsed = server.getEnergyUsed();
+    }
 
     @Override
     public String toString() {

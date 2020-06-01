@@ -2,7 +2,8 @@ package py.una.pol.service;
 
 import org.apache.log4j.Logger;
 import org.jgrapht.DirectedGraph;
-import org.jgrapht.Graph;
+import org.jgrapht.GraphPath;
+import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
 import org.jgrapht.graph.DefaultDirectedGraph;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -25,37 +26,30 @@ public class VnfService {
     private TrafficService trafficService;
 
     private Map<String, List<ShortestPath>> shortestPathMap;
-    private Graph<Node, Link> graph;
-    private List<Node> nodes;
-    private List<Link> links;
-    private List<Vnf> vnfs;
     private DirectedGraph<String, Path> graphMultiStage;
-    private DataGraphMap dataGraphMap = new DataGraphMap();
+    private Map<String, Node> nodesMap;
+    private Map<String, Link> linksMap;
 
     public boolean placement() {
-        List<Path> paths;
+        ResultPath resultPath;
         Traffic traffic;
         try {
             data.loadData();
             shortestPathMap = data.shortestPathMap;
-            graph = data.graph;
-            nodes = data.nodes;
-            links = data.links;
-            vnfs = data.vnfs;
+            nodesMap = data.nodesMap;
+            linksMap = data.linksMap;
 
-            for(int i = 0; i<conf.getNumberSolutions(); i++) {
-                traffic = trafficService.generateRandomtraffic(nodes, vnfs);
-                loadDataGraphMap();
+            for (int i = 0; i < conf.getNumberSolutions(); i++) {
+                traffic = trafficService.generateRandomtraffic(data.nodes, data.vnfs);
                 graphMultiStage = createGraphtMultiStage(traffic);
                 if (graphMultiStage == null) {
-                    logger.error("No existe solucion: graphMultiStage");
+                    logger.error("No se pudo crear el Grafo Multi Estados");
                 } else {
-                    paths = provisionTraffic(traffic);
-                    if (paths == null) {
-                        logger.error("No existe solucion: provisionTraffic");
+                    resultPath = provisionTraffic(traffic);
+                    if (resultPath == null) {
+                        logger.error("No se pudo encontrar una solucion");
                     } else {
                         logger.info("Solucion");
-                        updatedGraph();
                     }
                 }
             }
@@ -63,27 +57,6 @@ public class VnfService {
             logger.error("Error VNF placement: " + e.getMessage());
         }
         return true;
-    }
-
-    /* Cargar los nodos y enlaces del grafo en un Map para obtener el objeto antes de ser actualizado
-    y despues de ser modificados  */
-    private void loadDataGraphMap() {
-        Map<String, NodeGraph> nodeGraphMap = new HashMap<>();
-        Map<String, LinkGraph> linkGraphMap = new HashMap<>();
-        NodeGraph nodeGraph;
-        LinkGraph linkGraph;
-        for (Node node : nodes) {
-            nodeGraph = new NodeGraph(node);
-            nodeGraphMap.put(node.getId(), nodeGraph);
-        }
-
-        for (Link link : links) {
-            linkGraph = new LinkGraph(link);
-            linkGraphMap.put(link.getId(), linkGraph);
-        }
-
-        dataGraphMap.setNodesGraph(nodeGraphMap);
-        dataGraphMap.setLinksGraph(linkGraphMap);
     }
 
     private DirectedGraph<String, Path> createGraphtMultiStage(Traffic traffic) throws Exception {
@@ -105,7 +78,7 @@ public class VnfService {
             gMStage.addVertex(traffic.getNodeDestiny().getId());
 
             //Se crea enlaces desde el origen a la primera etapa
-            for (Node node : nodes) {
+            for (Node node : nodesMap.values()) {
                 //Ser verfifica si el nodo tiene servidor y si el origen tiene un camino al mismo
                 if (node.getServer() != null && isResourceAvailableServer(node.getServer()) &&
                         (kShortestPath = shortestPathMap.
@@ -180,6 +153,13 @@ public class VnfService {
                 }
             }
 
+            DijkstraShortestPath<String, Path> dijkstraShortestPath = new DijkstraShortestPath<>(gMStage);
+            GraphPath<String, Path> dijkstra = dijkstraShortestPath
+                    .getPath(traffic.getNodeOrigin().getId(), traffic.getNodeDestiny().getId());
+
+            if (dijkstra == null)
+                gMStage = null;
+
             return gMStage;
         } catch (Exception e) {
             logger.error("No se pudo crear el grafo multi-estados: " + e.getMessage());
@@ -187,15 +167,21 @@ public class VnfService {
         }
     }
 
-    private List<Path> provisionTraffic(Traffic traffic) throws Exception {
+    private ResultPath provisionTraffic(Traffic traffic) throws Exception {
+        ResultPath resultPath = new ResultPath();
         String randomNodeId, originNodeId;
         Random rn = new Random();
+        Map<String, Node> nodesMapAux;
+        Map<String, Link> linksMapAux;
         List<Path> pathNodeIds = new ArrayList<>();
+        List<String> serverVnf = new ArrayList<>();
         double bandwidtCurrent;
         boolean validPlacement = false;
         int retries = 0, indexVnf = 0;
         Vnf vnf;
         try {
+            nodesMapAux = loadNodesMapAux();
+            linksMapAux = loadLinkMapAux();
             originNodeId = traffic.getNodeOrigin().getId();
             bandwidtCurrent = traffic.getBandwidth();
 
@@ -205,11 +191,13 @@ public class VnfService {
                 while (!validPlacement) {  //Hasta completar una ruta random
                     //De forma randomica se obtiene un nodo del grafo multi estados
                     Set<Path> links = graphMultiStage.outgoingEdgesOf(originNodeId);
-                    Path path = (Path) links.toArray()[rn.nextInt(graphMultiStage.outDegreeOf(originNodeId))];
+                    Path path = (Path) links.toArray()
+                            [rn.nextInt(graphMultiStage.outDegreeOf(originNodeId))];
                     randomNodeId = graphMultiStage.getEdgeTarget(path);
                     //la ruta es valida si se llega hasta el nodo destino
                     if (traffic.getNodeDestiny().getId().equals(randomNodeId)) {
-                        if(!isResourceAvailableLink(originNodeId, randomNodeId, bandwidtCurrent))
+                        if (!isResourceAvailableLink(originNodeId, randomNodeId,
+                                bandwidtCurrent, linksMapAux))
                             break;
                         else {
                             validPlacement = true;
@@ -217,7 +205,8 @@ public class VnfService {
                         }
                     } else {
                         vnf = traffic.getSfc().getVnfs().get(indexVnf);
-                        if (!isResourceAvailableGraph(originNodeId, randomNodeId, bandwidtCurrent, vnf))
+                        if (!isResourceAvailableGraph(originNodeId, randomNodeId, bandwidtCurrent,
+                                vnf, nodesMapAux, linksMapAux, serverVnf))
                             break;
                         else {
                             bandwidtCurrent = vnf.getBandwidthFactor() * bandwidtCurrent;
@@ -228,9 +217,12 @@ public class VnfService {
                     }
                 }
             }
-            if(validPlacement)
-                return pathNodeIds;
-            else
+            if (validPlacement) {
+                updateGraphMap(nodesMapAux, linksMapAux);
+                resultPath.setPaths(pathNodeIds);
+                resultPath.setServerVnf(serverVnf);
+                return resultPath;
+            }else
                 return null;
         } catch (Exception e) {
             logger.error("Error en el provisionTraffic:" + e.getMessage());
@@ -238,71 +230,19 @@ public class VnfService {
         }
     }
 
-    private void updatedGraph() throws Exception {
-        try {
-            for (Map.Entry<String, NodeGraph> entry : dataGraphMap.getNodesGraph().entrySet()) {
-                if (entry.getValue().isUpdated())
-                    replaceVertexGraph(entry.getValue().getNode(), entry.getValue().getNodeUpdated());
-            }
-            for (Map.Entry<String, LinkGraph> entry : dataGraphMap.getLinksGraph().entrySet()) {
-                if (entry.getValue().isUpdated())
-                    replaceLinkGraph(entry.getValue().getLink(), entry.getValue().getLinkUpdated());
-            }
-
-            nodes = new ArrayList<>();
-            links = new ArrayList<>();
-            nodes.addAll(graph.vertexSet());
-            links.addAll(graph.edgeSet());
-
-        } catch (Exception e) {
-            logger.error("Error al actualizar el grafo: " + e.getMessage());
-            throw new Exception();
-        }
-    }
-
-    private void replaceLinkGraph(Link link, Link linkUpdated) {
-        Node nodeOrigin = graph.getEdgeSource(link);
-        Node nodeDestiny = graph.getEdgeTarget(link);
-        graph.removeEdge(link);
-        graph.addEdge(nodeOrigin, nodeDestiny, linkUpdated);
-    }
-
-    private void replaceVertexGraph(Node node, Node nodeUpdated) {
-        graph.addVertex(nodeUpdated);
-        Node nodeTarget, nodeSource;
-        int index = 0;
-        Link link;
-        Object[] links = graph.edgesOf(node).toArray();
-        while (index < links.length) {
-                link = (Link) links[index];
-                nodeTarget = graph.getEdgeTarget(link);
-                nodeSource = graph.getEdgeSource(link);
-                if (node.equals(nodeTarget)) {
-                    graph.removeEdge(link);
-                    graph.addEdge(nodeSource, nodeUpdated, link);
-                } else {
-                    graph.removeEdge(link);
-                    graph.addEdge(nodeUpdated, nodeTarget, link);
-                }
-            index = index + 1;
-        }
-        graph.removeVertex(node);
-    }
-
     private boolean isResourceAvailableGraph(String nodeOriginId, String nodeDestinyId,
-                                        double bandwidtCurrent, Vnf vnf) throws Exception {
+                                             double bandwidtCurrent, Vnf vnf, Map<String, Node> nodesMapAux,
+                                                     Map<String, Link> linksMapAux, List<String> serverVnf) throws Exception {
         int cpuToUse, ramToUse, storageToUse, energyToUse;
         Path path;
-        LinkGraph linkGraph;
-        Link linkUpdated;
+        Link link;
         try {
             path = graphMultiStage.getEdge(nodeOriginId, nodeDestinyId);
             String nodeId = path.getShortestPath().getNodes().
                     get(path.getShortestPath().getNodes().size() - 1);
 
-            NodeGraph nodeGraph = dataGraphMap.getNodesGraph().get(nodeId);
-            Node nodeUpdated = nodeGraph.getNodeUpdated();
-            Server server = nodeUpdated.getServer();
+            Node node = nodesMapAux.get(nodeId);
+            Server server = node.getServer();
             if (server != null) {
                 //Se calculan los recursos que seran utilizados
                 cpuToUse = server.getResourceCPUUsed() + vnf.getResourceCPU();
@@ -318,16 +258,14 @@ public class VnfService {
 
             if (!nodeDestinyId.equals(nodeOriginId)) {
                 for (String linkId : path.getShortestPath().getLinks()) {
-                    linkUpdated = dataGraphMap.getLinksGraph().get(linkId).getLinkUpdated();
-                    if (linkUpdated.getBandwidth() < bandwidtCurrent) {
+                    link = linksMapAux.get(linkId);
+                    if (link.getBandwidth() < bandwidtCurrent) {
                         return false;
                     }
                 }
                 for (String linkId : path.getShortestPath().getLinks()) {
-                    linkGraph = dataGraphMap.getLinksGraph().get(linkId);
-                    linkUpdated = linkGraph.getLinkUpdated();
-                    linkGraph.getLinkUpdated().setBandwidthUsed(linkUpdated.getBandwidthUsed() + bandwidtCurrent);
-                    linkGraph.setUpdated(true);
+                    link = linksMapAux.get(linkId);
+                    link.setBandwidthUsed(link.getBandwidthUsed() + bandwidtCurrent);
                 }
             }
 
@@ -337,7 +275,7 @@ public class VnfService {
             server.setResourceStorageUsed(storageToUse);
             server.setEnergyUsed(energyToUse);
             server.getVnf().add(vnf);
-            nodeGraph.setUpdated(true);
+            serverVnf.add(node.getId());
 
             return true;
         } catch (Exception e) {
@@ -347,25 +285,22 @@ public class VnfService {
     }
 
     private boolean isResourceAvailableLink(String nodeOriginId, String nodeDestinyId,
-                                        double bandwidtCurrent) throws Exception {
+                                            double bandwidtCurrent, Map<String, Link> linksMapAux) throws Exception {
         Path path;
-        LinkGraph linkGraph;
-        Link linkUpdated;
+        Link link;
         try {
             path = graphMultiStage.getEdge(nodeOriginId, nodeDestinyId);
 
             if (!nodeDestinyId.equals(nodeOriginId)) {
                 for (String linkId : path.getShortestPath().getLinks()) {
-                    linkUpdated = dataGraphMap.getLinksGraph().get(linkId).getLinkUpdated();
-                    if (linkUpdated.getBandwidth() < bandwidtCurrent) {
+                    link = linksMapAux.get(linkId);
+                    if (link.getBandwidth() < bandwidtCurrent) {
                         return false;
                     }
                 }
                 for (String linkId : path.getShortestPath().getLinks()) {
-                    linkGraph = dataGraphMap.getLinksGraph().get(linkId);
-                    linkUpdated = linkGraph.getLinkUpdated();
-                    linkGraph.getLinkUpdated().setBandwidthUsed(linkUpdated.getBandwidthUsed() + bandwidtCurrent);
-                    linkGraph.setUpdated(true);
+                    link = linksMapAux.get(linkId);
+                    link.setBandwidthUsed(link.getBandwidthUsed() + bandwidtCurrent);
                 }
             }
 
@@ -404,5 +339,60 @@ public class VnfService {
         return node;
     }
 
+    private Map<String, Node> loadNodesMapAux() throws Exception {
+        Map<String, Node> nodesMapAux = new HashMap<>();
+        try {
+            for (Node node : nodesMap.values()) {
+                Node nodeAux = new Node();
+                nodeAux.setId(node.getId());
+                nodeAux.setEnergyCost(node.getEnergyCost());
+                if (node.getServer() != null) {
+                    Server server = new Server(node.getServer());
+                    nodeAux.setServer(server);
+                }
+                nodesMapAux.put(nodeAux.getId(), nodeAux);
+            }
+            return nodesMapAux;
+        } catch (Exception e) {
+            logger.error("Error en loadNodesMapAux: " + e.getMessage());
+            throw new Exception();
+        }
+    }
+
+
+    private Map<String, Link> loadLinkMapAux() throws Exception {
+        Map<String, Link> linksMapAux = new HashMap<>();
+        try {
+            for (Link link : linksMap.values()) {
+                Link linkAux = new Link();
+                linkAux.setId(link.getId());
+                linkAux.setDelay(link.getDelay());
+                linkAux.setDistance(link.getDistance());
+                linkAux.setBandwidth(link.getBandwidth());
+                linkAux.setBandwidthUsed(link.getBandwidthUsed());
+                linkAux.setBandwidthCost(link.getBandwidthCost());
+                linksMapAux.put(linkAux.getId(), linkAux);
+            }
+            return linksMapAux;
+        } catch (Exception e) {
+            logger.error("Error en loadLinkMapAux: " + e.getMessage());
+            throw new Exception();
+        }
+    }
+
+    private void updateGraphMap(Map<String, Node> nodesMapAux, Map<String, Link> linksMapAux)
+            throws Exception {
+        try {
+            nodesMap = new HashMap<>();
+            linksMap = new HashMap<>();
+
+            nodesMap.putAll(nodesMapAux);
+            linksMap.putAll(linksMapAux);
+        } catch (Exception e) {
+            logger.error("Error en updateGraphMap: " + e.getMessage());
+            throw new Exception();
+        }
+
+    }
 }
 

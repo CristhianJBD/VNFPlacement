@@ -1,16 +1,22 @@
 package py.una.pol.service;
 
 import org.apache.log4j.Logger;
+import org.jgrapht.Graph;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import py.una.pol.dto.NFVdto.Link;
 import py.una.pol.dto.NFVdto.Node;
+import py.una.pol.dto.NFVdto.Traffic;
 import py.una.pol.dto.NFVdto.Vnf;
+import py.una.pol.dto.ObjectiveFunctionsSolutions;
+import py.una.pol.dto.Path;
+import py.una.pol.dto.ResultPath;
 import py.una.pol.util.Configurations;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -19,6 +25,45 @@ public class ObjectiveFunctionService {
 
     @Autowired
     private Configurations configuration;
+
+    public void solutionFOs(ResultPath resultPath, Traffic traffic,
+                            Map<String, Node> nodesMap, Map<String, Link> linksMap) throws Exception {
+        ObjectiveFunctionsSolutions solutions = new ObjectiveFunctionsSolutions();
+        List<Node> nodes = new ArrayList<>();
+        List<Link> links = new ArrayList<>();
+        logger.info("Soluciones: ");
+
+        for (Path path : resultPath.getPaths()) {
+            for (String nodeId : path.getShortestPath().getNodes())
+                nodes.add(nodesMap.get(nodeId));
+        }
+
+        for (Path path : resultPath.getPaths()) {
+            for (String linkId : path.getShortestPath().getLinks())
+                links.add(linksMap.get(linkId));
+        }
+
+        solutions.getEnergyCostList().add(calculateEnergyCost(nodes));
+        solutions.getForwardingTrafficCostList().add(calculateForwardingTrafficCost(nodes, links));
+        solutions.getHostSizeList().add(calculateHostSize(nodes));
+        solutions.getDelayCostList().add(calculateDelayTotal(nodes, links));
+        solutions.getDeployCostList().add(calculateDeployCost(nodes));
+        solutions.getDistanceList().add(calculateDistance(links));
+        solutions.getHopsList().add(calculateHops(links));
+        solutions.getBandwidthList().add(calculateBandwidth(links));
+        solutions.getNumberInstancesList().add(calculateNumberIntances(nodes));
+        solutions.getLoadTrafficList().add(calculateLoadTraffic(nodes, links));
+        solutions.getResourcesCostList().add(calculateResources(nodes));
+        solutions.getSloCostList().add(calculateSLOCost(nodes, links, traffic.getPenaltyCostSLO(), traffic.getDelayMaxSLA()));
+        solutions.getLicencesCostList().add(calculateLicencesCost(nodes));
+        solutions.getFragmentationList().add(calculateResourceFragmentation(nodes, links));
+        solutions.getAllLinksCostList().add(calculateAllLinkCost(links));
+        solutions.getMaxUseLinkList().add(calculateMaximunUseLink(links));
+        solutions.getThroughputList().add(calculateThroughput(links));
+
+        logger.info(solutions.toString());
+
+    }
 
     /*
     Costo de la Energia en Dolares = suma de los costos(dolares) de energia utilizados en los nodos mas
@@ -34,8 +79,8 @@ public class ObjectiveFunctionService {
                             (node.getServer().getEnergyCost() * node.getServer().getEnergyUsed());
 
                     //Costo de energia consumida en el nodo donde no hay Servidor se encuentra en la ruta
-                 else
-                     energyCost = energyCost + node.getEnergyCost();
+                else
+                    energyCost = energyCost + node.getEnergyCost();
             }
             return energyCost;
         } catch (Exception e) {
@@ -73,7 +118,7 @@ public class ObjectiveFunctionService {
         try {
             //Numero de Servidores utilizados para instalar un VNF
             for (Node node : nodes)
-                if (node.getServer() != null && node.getServer().getVnf()!= null)
+                if (node.getServer() != null && node.getServer().getVnf() != null)
                     hostSize = hostSize + 1;
 
             return hostSize;
@@ -168,7 +213,7 @@ public class ObjectiveFunctionService {
             //Costo por superar el maximo delay
             if (delayMax < calculateDelayTotal(nodes, links)) {
                 return sloCost;
-            }else{
+            } else {
                 return 0;
             }
         } catch (Exception e) {
@@ -183,13 +228,13 @@ public class ObjectiveFunctionService {
             //Costo de multa de cada recurso por el recurso que sobra de la capacidad total de cada Servidor
             for (Node node : nodes) {
                 if (node.getServer() != null) {
-                    fragmentation = fragmentation+
+                    fragmentation = fragmentation +
                             (node.getServer().getResourceCPU() - node.getServer().getResourceCPUUsed()) *
                                     configuration.getServerPenaltyCPUCost();
-                    fragmentation = fragmentation+
+                    fragmentation = fragmentation +
                             (node.getServer().getResourceRAM() - node.getServer().getResourceRAMUsed()) *
                                     configuration.getServerPenaltyRAMCost();
-                    fragmentation = fragmentation+
+                    fragmentation = fragmentation +
                             (node.getServer().getResourceStorage() - node.getServer().getResourceStorageUsed()) *
                                     configuration.getServerPenaltyStorageCost();
                 }
@@ -215,11 +260,11 @@ public class ObjectiveFunctionService {
             for (Node node : nodes)
                 if (node.getServer() != null) {
                     resourceCPUCost = resourceCPUCost +
-                            (node.getServer().getResourceCPUUsed()*node.getServer().getResourceCPUCost());
+                            (node.getServer().getResourceCPUUsed() * node.getServer().getResourceCPUCost());
                     resourceRAMCost = resourceRAMCost +
-                            (node.getServer().getResourceRAMUsed()*node.getServer().getResourceRAMCost());
+                            (node.getServer().getResourceRAMUsed() * node.getServer().getResourceRAMCost());
                     resourceStorageCost = resourceStorageCost +
-                            (node.getServer().getResourceStorageUsed()*node.getServer().getResourceStorageCost());
+                            (node.getServer().getResourceStorageUsed() * node.getServer().getResourceStorageCost());
                 }
 
             resourceTotalCost = resourceCPUCost + resourceRAMCost + resourceStorageCost;
@@ -303,7 +348,7 @@ public class ObjectiveFunctionService {
         double maximunUseLink;
         List<Double> bandwidths = new ArrayList<>();
         try {
-            for(Link link : links)
+            for (Link link : links)
                 bandwidths.add(link.getBandwidthUsed());
 
             List<Double> sortedList = bandwidths.stream().sorted(Comparator.reverseOrder()).collect(Collectors.toList());

@@ -9,11 +9,11 @@ import java.util.List;
 @Data
 public class ResultPath {
 
-    //Lista de nodos aleatorios
-    List<Node> nodes;
+    //Paths de la solucion
+    List<Path> paths;
 
-    //Lista de enlaces aleatorios
-    List<Link> links;
+    //Servidores donde se instalaron los VNFs
+    List<String> serverVnf;
 
 
 }

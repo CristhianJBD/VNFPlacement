@@ -105,6 +105,24 @@ public class Configurations {
     @Value("${node.server}")
     private String nodeServer;
 
+    //Trafico
+    @Value("${traffic.bandwidth.min}")
+    private int trafficBandwidthMin;
+    @Value("${traffic.bandwidth.max}")
+    private int trafficBandwidthMax;
+    @Value("${traffic.delay.sla.min}")
+    private int trafficDelaySlaMin;
+    @Value("${traffic.delay.sla.max}")
+    private int trafficDelaySlaMax;
+    @Value("${traffic.penalty.slo.min}")
+    private int trafficPenaltySloMin;
+    @Value("${traffic.penalty.slo.max}")
+    private int trafficPenaltySloMax;
+    @Value("${traffic.sfc.min}")
+    private int trafficSfcMin;
+    @Value("${traffic.sfc.max}")
+    private int trafficSfcMax;
+
     public String toStringVNFs() {
         final StringBuilder sb = new StringBuilder("VNFs{");
         sb.append("vnfSize=").append(vnfSize);

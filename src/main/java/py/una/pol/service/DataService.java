@@ -23,17 +23,19 @@ public class DataService {
     @Autowired
     private Configurations conf;
 
-    public List<Vnf> vnfs = new ArrayList<>();
-    public List<Server> servers = new ArrayList<>();
-    public List<Node> nodes = new ArrayList<>();
-    public List<Link> links = new ArrayList<>();
     private int[][] delay;
     private int[][] distance;
     private double[][] bandwidthCost;
     private double[][] bandwidth;
     private String[][] matrixNodes;
-    Graph<Node, Link> graph = new SimpleGraph<>(Link.class);
-    Map<String, List<ShortestPath>> shortestPathMap = new HashMap<>();
+    private Graph<Node, Link> graph = new SimpleGraph<>(Link.class);
+    public Map<String, List<ShortestPath>> shortestPathMap = new HashMap<>();
+    public List<Node> nodes = new ArrayList<>();
+    public List<Link> links = new ArrayList<>();
+    public Map<String, Node> nodesMap = new HashMap<>();
+    public Map<String, Link> linksMap = new HashMap<>();
+    public List<Vnf> vnfs = new ArrayList<>();
+    public List<Server> servers = new ArrayList<>();
 
     public void loadData() {
         try {
@@ -151,6 +153,7 @@ public class DataService {
                 node.setServer(getServer(nodeServer[i]));
 
                 logger.info(node.toString());
+                nodesMap.put(node.getId(), node);
                 nodes.add(node);
             }
 
@@ -264,6 +267,7 @@ public class DataService {
                         link.setDelay(delay[i][j]);
                         link.setDistance(distance[i][j]);
 
+                        linksMap.put(link.getId(), link);
                         links.add(link);
                         logger.info(link.toString());
 
