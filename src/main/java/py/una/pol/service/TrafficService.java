@@ -10,6 +10,7 @@ import py.una.pol.dto.NFVdto.Vnf;
 import py.una.pol.util.Configurations;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 @Service
@@ -19,9 +20,11 @@ public class TrafficService {
     @Autowired
     private Configurations conf;
 
-    public Traffic generateRandomtraffic(List<Node> nodes, List<Vnf> vnfs) throws Exception {
+    public Traffic generateRandomtraffic(Map<String, Node> nodesMap, List<Vnf> vnfs) throws Exception {
         Random rn = new Random();
+        Object[] arrayNode;
         int sfcSize;
+        boolean aux = false;
         try {
             Traffic traffic = new Traffic();
             traffic.setBandwidth(rn.nextInt
@@ -30,8 +33,14 @@ public class TrafficService {
                     (conf.getTrafficDelaySlaMax()- conf.getTrafficDelaySlaMin() + 1) + conf.getTrafficDelaySlaMin());
             traffic.setPenaltyCostSLO(rn.nextInt
                     (conf.getTrafficPenaltySloMax()-conf.getTrafficPenaltySloMin() + 1) + conf.getTrafficPenaltySloMin());
-            traffic.setNodeDestiny(nodes.get(5));
-            traffic.setNodeOrigin(nodes.get(0));
+
+            arrayNode = nodesMap.values().toArray();
+            while (!aux) {
+                traffic.setNodeDestiny((Node) arrayNode[rn.nextInt(arrayNode.length)]);
+                traffic.setNodeOrigin((Node) arrayNode[rn.nextInt(arrayNode.length)]);
+                if (!traffic.getNodeOrigin().equals(traffic.getNodeDestiny()))
+                    aux = true;
+            }
 
             sfcSize = rn.nextInt(conf.getTrafficSfcMax() - conf.getTrafficSfcMin())
                     + conf.getTrafficSfcMin();

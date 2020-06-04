@@ -27,7 +27,7 @@ public class ObjectiveFunctionService {
     private Configurations configuration;
 
     public void solutionFOs(ResultPath resultPath, Traffic traffic,
-                            Map<String, Node> nodesMap, Map<String, Link> linksMap) throws Exception {
+                            Map<String, Node> nodesMap, Map<String, Link> linksMap, List<String> serverVnf) throws Exception {
         ObjectiveFunctionsSolutions solutions = new ObjectiveFunctionsSolutions();
         List<Node> nodes = new ArrayList<>();
         List<Link> links = new ArrayList<>();

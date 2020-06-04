@@ -38,8 +38,6 @@ public class Configurations {
     private Integer percentageUtilResource;
     @Value("${percentage.utilization.energy}")
     private Integer percentageUtilEnergy;
-    @Value("${percentage.utilization.bandwidth}")
-    private Integer percentageUtilBandwidth;
 
     //VNF
     @Value("${vnf.size}")

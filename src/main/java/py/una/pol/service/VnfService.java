@@ -39,17 +39,20 @@ public class VnfService {
             nodesMap = data.nodesMap;
             linksMap = data.linksMap;
 
-            for (int i = 0; i < conf.getNumberSolutions(); i++) {
-                traffic = trafficService.generateRandomtraffic(data.nodes, data.vnfs);
+            for (int i = 0; i <= conf.getNumberSolutions(); i++) {
+                traffic = trafficService.generateRandomtraffic(nodesMap, data.vnfs);
                 graphMultiStage = createGraphtMultiStage(traffic);
                 if (graphMultiStage == null) {
-                    logger.error("No se pudo crear el Grafo Multi Estados");
+                    logger.error(i + "- No se pudo crear el Grafo Multi Estados: " +
+                            "NodoOrigen: " + traffic.getNodeOrigin().getId() + ", NodoDestino: " + traffic.getNodeDestiny().getId());
                 } else {
                     resultPath = provisionTraffic(traffic);
                     if (resultPath == null) {
-                        logger.error("No se pudo encontrar una solucion");
+                        logger.error(i + "- No se pudo encontrar una solucion: " +
+                                "NodoOrigen: " + traffic.getNodeOrigin().getId() + ", NodoDestino: " + traffic.getNodeDestiny().getId());
                     } else {
-                        logger.info("Solucion");
+                        logger.info(i + "- Solucion: " +
+                                "NodoOrigen: " + traffic.getNodeOrigin().getId() + ", NodoDestino: " + traffic.getNodeDestiny().getId());
                     }
                 }
             }
@@ -80,13 +83,13 @@ public class VnfService {
             //Se crea enlaces desde el origen a la primera etapa
             for (Node node : nodesMap.values()) {
                 //Ser verfifica si el nodo tiene servidor y si el origen tiene un camino al mismo
-                if (node.getServer() != null && isResourceAvailableServer(node.getServer()) &&
-                        (kShortestPath = shortestPathMap.
-                                get(traffic.getNodeOrigin().getId() + "-" + node.getId())) != null) {
+                if (node.getServer() != null && isResourceAvailableServer(node.getServer())) {
+                    shortestPath = new ShortestPath();
+                    kShortestPath = shortestPathMap.get(traffic.getNodeOrigin().getId() + "-" + node.getId());
+
                     //Se guardan los nodos con servidor
                     states.add(node);
-
-                    if (kShortestPath.size() > 0) {
+                    if (kShortestPath!=null && kShortestPath.size() > 0) {
                         //Se obtiene de forma randomica uno de los k caminos mas cortos
                         shortestPath = kShortestPath.get(rn.nextInt(kShortestPath.size()));
 
@@ -116,8 +119,8 @@ public class VnfService {
             for (int i = 1; i < numberStages; i++) {
                 for (Node nodeOrigin : states) {
                     for (Node nodeDestiny : states) {
-                        kShortestPath = shortestPathMap.get(nodeOrigin.getId() + "-" + nodeDestiny.getId());
                         shortestPath = new ShortestPath();
+                        kShortestPath = shortestPathMap.get(nodeOrigin.getId() + "-" + nodeDestiny.getId());
                         if (kShortestPath != null && kShortestPath.size() > 0) {
                             shortestPath = kShortestPath.get(rn.nextInt(kShortestPath.size()));
                             nMSOrigin = changeId(nodeOrigin, i);
@@ -138,8 +141,8 @@ public class VnfService {
             }
             //Crear enlaces entre la ultima etapa y el destino
             for (Node node : states) {
+                shortestPath = new ShortestPath();
                 kShortestPath = shortestPathMap.get(node.getId() + "-" + traffic.getNodeDestiny().getId());
-
                 if (kShortestPath != null && kShortestPath.size() > 0) {
                     shortestPath = kShortestPath.get(rn.nextInt(kShortestPath.size()));
                     nMSOrigin = changeId(node, numberStages);
@@ -148,7 +151,7 @@ public class VnfService {
                 } else if (traffic.getNodeDestiny().getServer() != null && node.equals(traffic.getNodeDestiny())) {
                     nMSOrigin = changeId(node, numberStages);
                     shortestPath.getNodes().add(node.getId());
-                    path = new Path(nMSOrigin.getId() + "-" + traffic.getNodeDestiny().getId());
+                    path = new Path(shortestPath, nMSOrigin.getId() + "-" + traffic.getNodeDestiny().getId());
                     gMStage.addEdge(changeId(node, numberStages).getId(), traffic.getNodeDestiny().getId(), path);
                 }
             }
@@ -213,6 +216,7 @@ public class VnfService {
                             pathNodeIds.add(path);
                             originNodeId = randomNodeId;
                             indexVnf = indexVnf + 1;
+                            retries = 0;
                         }
                     }
                 }
@@ -234,6 +238,7 @@ public class VnfService {
                                              double bandwidtCurrent, Vnf vnf, Map<String, Node> nodesMapAux,
                                                      Map<String, Link> linksMapAux, List<String> serverVnf) throws Exception {
         int cpuToUse, ramToUse, storageToUse, energyToUse;
+        double bandwidtUsed;
         Path path;
         Link link;
         try {
@@ -259,7 +264,8 @@ public class VnfService {
             if (!nodeDestinyId.equals(nodeOriginId)) {
                 for (String linkId : path.getShortestPath().getLinks()) {
                     link = linksMapAux.get(linkId);
-                    if (link.getBandwidth() < bandwidtCurrent) {
+                    bandwidtUsed = link.getBandwidthUsed() + bandwidtCurrent;
+                    if (link.getBandwidth() < bandwidtUsed) {
                         return false;
                     }
                 }
@@ -279,22 +285,23 @@ public class VnfService {
 
             return true;
         } catch (Exception e) {
-            logger.error("Error en IsResourceAvailable: " + e.getMessage());
+            logger.error("Error en IsResourceAvailableGraph: " + e.getMessage());
             throw new Exception();
         }
     }
 
     private boolean isResourceAvailableLink(String nodeOriginId, String nodeDestinyId,
                                             double bandwidtCurrent, Map<String, Link> linksMapAux) throws Exception {
-        Path path;
-        Link link;
+        Path path; Link link;
+        double bandwidtUsed;
         try {
             path = graphMultiStage.getEdge(nodeOriginId, nodeDestinyId);
 
             if (!nodeDestinyId.equals(nodeOriginId)) {
                 for (String linkId : path.getShortestPath().getLinks()) {
                     link = linksMapAux.get(linkId);
-                    if (link.getBandwidth() < bandwidtCurrent) {
+                    bandwidtUsed = link.getBandwidthUsed() + bandwidtCurrent;
+                    if (link.getBandwidth() < bandwidtUsed) {
                         return false;
                     }
                 }
@@ -306,7 +313,7 @@ public class VnfService {
 
             return true;
         } catch (Exception e) {
-            logger.error("Error en IsResourceAvailable: " + e.getMessage());
+            logger.error("Error en IsResourceAvailableLink: " + e.getMessage());
             throw new Exception();
         }
     }
@@ -325,7 +332,7 @@ public class VnfService {
             else
                 return true;
         } catch (Exception e) {
-            logger.error("Error en IsResourceAvailable: " + e.getMessage());
+            logger.error("Error en IsResourceAvailableServer: " + e.getMessage());
             throw new Exception();
         }
     }
