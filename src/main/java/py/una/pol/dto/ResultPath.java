@@ -11,9 +11,4 @@ public class ResultPath {
 
     //Paths de la solucion
     List<Path> paths;
-
-    //Servidores donde se instalaron los VNFs
-    List<String> serverVnf;
-
-
 }

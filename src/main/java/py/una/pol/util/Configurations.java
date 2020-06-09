@@ -34,10 +34,6 @@ public class Configurations {
     private Integer k;
     @Value("${retries.solution}")
     private Integer retriesSolution;
-    @Value("${percentage.utilization.resource}")
-    private Integer percentageUtilResource;
-    @Value("${percentage.utilization.energy}")
-    private Integer percentageUtilEnergy;
 
     //VNF
     @Value("${vnf.size}")
