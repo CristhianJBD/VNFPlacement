@@ -4,8 +4,8 @@ vnf.id = Firewall::IDS::Proxy::NAT::DPI
 #Delay de procesamiento de cada VNF  !!cite 461 cte 20 ms
 vnf.delay = 20::12::5::8::10
 
-#Costo de Deployar o Instalar cada VNF  !!Esto no encontré
-vnf.deploy = 20::30::25::10::50
+#Costo de Deployar o Instalar cada VNF  !!puse nros mas pequenhos
+vnf.deploy = 2::3::2.5::1::5
 
 #Requerimiento de CPU de cada VNF (Cantidad de Cores) !!cite 187
 vnf.resource.cpu = 4::2::1::1::2
@@ -13,8 +13,8 @@ vnf.resource.cpu = 4::2::1::1::2
 #Requerimiento de RAM de cada VNF (En GB)  !!cite 187
 vnf.resource.ram = 4::8::4::2::1
 
-#Requerimiento de almacenamiento de cada VNF (En GB)
-vnf.resource.storage = 6::9::8::7::10
+#Requerimiento de almacenamiento de cada VNF (En GB) !! mas pequenhos
+vnf.resource.storage = 3::4::5::6::4
 
 #Costo de licencia de cada VNF (En dolares)
 vnf.licence.cost = 75::80::85::60::90
@@ -40,22 +40,22 @@ server.energy.cost = 0.1::0.2::0.25::0.70
 server.resource.cpu = 16::8::16::32
 
 #Capacidad de RAM por Servidor (En GB)
-server.resource.ram = 32::64::38::32
+server.resource.ram = 32::16::32::64
 
 #Capacidad de almacenamiento por Servidor (En GB)
 server.resource.storage = 2048::1000::1024::1500
 
 #Costo de CPU por GB por Servidor (En dolares)
-server.resource.cpu.cost = 3::2::3::2
+server.resource.cpu.cost = 0.03::0.02::0.03::2
 
 #Costo de RAM por GB por Servidor (En dolares)
-server.resource.ram.cost = 3::2::1.5::2
+server.resource.ram.cost = 0.3::0.2::0.5::0.02
 
 #Costo de almacenamiento por GB por Servidor (En dolares)
 server.resource.storage.cost = 2.7::2.5::3::2
 
-#Consumo de Energia en Watts al activar el Servidor
-server.energy.per.core.watts = 100::185::90::1500
+#Consumo de Energia por core en Watts al activar el Servidor
+server.energy.per.core.watts = 100::140::90::110
 
 #Capacidad maxima de Energia en Watts   !!! cite 187
 server.energy.peak.watts = 2735::3000::3500::2900
