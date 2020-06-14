@@ -7,6 +7,6 @@ import java.util.List;
 
 @Data
 public class ShortestPath {
-    List<String> nodes = new ArrayList<>();
-    List<String> links = new ArrayList<>();
+    private List<String> nodes = new ArrayList<>();
+    private List<String> links = new ArrayList<>();
 }

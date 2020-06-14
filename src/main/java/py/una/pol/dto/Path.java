@@ -1,19 +1,12 @@
 package py.una.pol.dto;
 
-import lombok.Data;
 
+import lombok.Data;
 
 @Data
 public class Path {
-   String id;
-   ShortestPath shortestPath;
+    private String id;
 
-   public Path( ShortestPath shortestPath, String id) {
-      this.id = id;
-      this.shortestPath = shortestPath;
-   }
+    private ShortestPath shortestPath;
 
-   public Path(String id) {
-      this.id = id;
-   }
 }

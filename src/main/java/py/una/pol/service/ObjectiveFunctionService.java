@@ -1,7 +1,6 @@
 package py.una.pol.service;
 
 import org.apache.log4j.Logger;
-import org.jgrapht.Graph;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import py.una.pol.dto.NFVdto.Link;
@@ -26,13 +25,13 @@ public class ObjectiveFunctionService {
     @Autowired
     private Configurations configuration;
 
-    public void solutionFOs(ResultPath resultPath, Traffic traffic,
-                            Map<String, Node> nodesMap, Map<String, Link> linksMap) throws Exception {
+    public void solutionFOs(Traffic traffic, ResultPath resultPath,
+                            Map<String, Node> nodesMap, Map<String, Link> linksMap)
+            throws Exception {
         ObjectiveFunctionsSolutions solutions = new ObjectiveFunctionsSolutions();
-        List<Node> nodes = new ArrayList<>();
-        List<Link> links = new ArrayList<>();
         logger.info("Soluciones: ");
 
+        /*
         for (Path path : resultPath.getPaths()) {
             for (String nodeId : path.getShortestPath().getNodes())
                 nodes.add(nodesMap.get(nodeId));
@@ -42,6 +41,10 @@ public class ObjectiveFunctionService {
             for (String linkId : path.getShortestPath().getLinks())
                 links.add(linksMap.get(linkId));
         }
+         */
+
+        List<Node> nodes = new ArrayList<>(nodesMap.values());
+        List<Link> links = new ArrayList<>(linksMap.values());
 
         solutions.getEnergyCostList().add(calculateEnergyCost(nodes));
         solutions.getForwardingTrafficCostList().add(calculateForwardingTrafficCost(nodes, links));
