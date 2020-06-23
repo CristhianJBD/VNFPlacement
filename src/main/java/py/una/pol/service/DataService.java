@@ -99,6 +99,7 @@ public class DataService {
         try {
             String[] ids = conf.getServerId().split(separator);
             String[] licences = conf.getServerLicenceCost().split(separator);
+            String[] deploys = conf.getServerDeploy().split(separator);
             String[] energyCosts = conf.getServerEnergyCost().split(separator);
             String[] cpus = conf.getServerResourceCPU().split(separator);
             String[] rams = conf.getServerResourceRAM().split(separator);
@@ -113,6 +114,7 @@ public class DataService {
                 server = new Server();
                 server.setId(ids[i]);
                 server.setLicenceCost(Integer.parseInt(licences[i]));
+                server.setDeploy(Integer.parseInt(deploys[i]));
                 server.setEnergyCost(Double.parseDouble(energyCosts[i]));
                 server.setResourceCPU(Integer.parseInt(cpus[i]));
                 server.setResourceRAM(Integer.parseInt(rams[i]));

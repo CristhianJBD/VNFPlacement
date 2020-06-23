@@ -25,7 +25,7 @@ public class VnfService {
     @Autowired
     private TrafficService trafficService;
     @Autowired
-    private ObjectiveFunctionService objectiveFunctionService;
+    private ObjectiveFunctionService ofs;
 
     private Map<String, List<ShortestPath>> shortestPathMap;
     private DirectedGraph<String, KPath> graphMultiStage;
@@ -45,19 +45,23 @@ public class VnfService {
                 traffic = trafficService.generateRandomtraffic(nodesMap, data.vnfs);
                 graphMultiStage = createGraphtMultiStage(traffic);
                 if (graphMultiStage == null) {
-                    logger.error(i + "- No se pudo crear el Grafo Multi Estados: " +
+                    logger.warn(i + "- No se pudo crear el Grafo Multi-Estados: " +
                             "NodoOrigen: " + traffic.getNodeOrigin().getId() + ", NodoDestino: " + traffic.getNodeDestiny().getId());
                 } else {
                     resultPath = provisionTraffic(traffic);
                     if (resultPath == null) {
-                        logger.error(i + "- No se pudo encontrar una solucion: " +
+                        logger.warn(i + "- No se pudo encontrar una solucion: " +
                                 "NodoOrigen: " + traffic.getNodeOrigin().getId() + ", NodoDestino: " + traffic.getNodeDestiny().getId());
                     } else {
                         logger.info(i + "- Solucion: " +
                                 "NodoOrigen: " + traffic.getNodeOrigin().getId() + ", NodoDestino: " + traffic.getNodeDestiny().getId());
+
+                        ofs.solutionFOs(traffic, resultPath, nodesMap, linksMap);
                     }
                 }
             }
+
+            logger.info(ofs.solutions);
         } catch (Exception e) {
             logger.error("Error VNF placement: " + e.getMessage());
         }

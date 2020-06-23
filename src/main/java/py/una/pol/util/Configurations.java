@@ -62,6 +62,8 @@ public class Configurations {
     private String serverId;
     @Value("${server.licence.cost}")
     private String serverLicenceCost;
+    @Value("${server.deploy}")
+    private String serverDeploy;
     @Value("${server.energy.cost}")
     private String serverEnergyCost;
     @Value("${server.resource.cpu}")

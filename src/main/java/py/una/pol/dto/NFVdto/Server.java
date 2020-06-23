@@ -14,6 +14,9 @@ public class Server {
     //Vnf que es instalado en el Servidor
     private List<Vnf> vnf = new ArrayList<>();
 
+    //Costo de Deployar o Instalar el VNF
+    private int deploy;
+
     //Costo de licencia del Servidor
     private double licenceCost;
 
@@ -63,6 +66,7 @@ public class Server {
         this.id = server.getId();
         this.vnf = server.getVnf();
         this.licenceCost = server.getLicenceCost();
+        this.deploy = server.getDeploy();
         this.energyCost = server.getEnergyCost();
         this.resourceCPU = server.getResourceCPU();
         this.resourceRAM = server.getResourceRAM();
@@ -84,6 +88,7 @@ public class Server {
         sb.append("id='").append(id).append('\'');
         sb.append(", vnf=").append(vnf);
         sb.append(", licenceCost=").append(licenceCost);
+        sb.append(", deploy=").append(deploy);
         sb.append(", energyCost=").append(energyCost);
         sb.append(", resourceCPU=").append(resourceCPU);
         sb.append(", resourceRAM=").append(resourceRAM);
