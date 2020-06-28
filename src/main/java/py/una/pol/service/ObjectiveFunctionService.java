@@ -5,8 +5,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import py.una.pol.dto.NFVdto.*;
 import py.una.pol.dto.Solution;
-import py.una.pol.dto.Path;
-import py.una.pol.dto.ResultPath;
 import py.una.pol.util.Configurations;
 
 import java.math.RoundingMode;
@@ -26,51 +24,41 @@ public class ObjectiveFunctionService {
 
     Solution solutions = new Solution();
 
-    public Solution solutionFOs(Traffic traffic, ResultPath resultPath,
-                                Map<String, Node> nodesMap, Map<String, Link> linksMap)
+    public Solution solutionFOs(Map<String, Node> nodesMap, Map<String, Link> linksMap,
+                                List<Traffic> traffics)
             throws Exception {
+        Traffic traffic = new Traffic();
         DecimalFormat decimalFormat = new DecimalFormat("#.###");
         decimalFormat.setRoundingMode(RoundingMode.CEILING);
-        List<Node> nodes = new ArrayList<>();
-        List<Link> links = new ArrayList<>();
-        List<Server> serversSFC = new ArrayList<>();
-        List<Server> servers;
+        List<Server> servers = new ArrayList<>();
 
-        for (Path path : resultPath.getPaths()) {
-            for (String nodeId : path.getShortestPath().getNodes())
-                nodes.add(nodesMap.get(nodeId));
-        }
+        List<Node> nodes = new ArrayList<>(nodesMap.values());
+        List<Link> links = new ArrayList<>(linksMap.values());
 
-        for (Path path : resultPath.getPaths()) {
-            for (String linkId : path.getShortestPath().getLinks())
-                links.add(linksMap.get(linkId));
-        }
-
-        for (String nodeId : resultPath.getServerVnf()) {
-            serversSFC.add(nodesMap.get(nodeId).getServer());
-        }
-        servers = serversSFC.stream().distinct().collect(Collectors.toList());
+        for(Node node : nodes)
+            if(node.getServer()!=null && node.getServer().getVnf().size() > 0)
+                servers.add(node.getServer());
 
         solutions.getEnergyCostList().add(decimalFormat.format(
-                calculateEnergyCost(nodes, serversSFC, traffic.getSfc())));
+                calculateEnergyCost(nodes, servers)));
         solutions.getForwardingTrafficCostList().add(decimalFormat.format(
                 calculateForwardingTrafficCost(nodes, links)));
         solutions.getSloCostList().add(decimalFormat.format(
-                calculateSLOCost(traffic.getSfc(), links, traffic.getPenaltyCostSLO(), traffic.getDelayMaxSLA())));
+                calculateSLOCost(servers, links, traffics)));
         solutions.getHostSizeList().add(calculateHostSize(servers));
-        solutions.getDelayCostList().add(calculateDelayTotal(traffic.getSfc(), links));
-        solutions.getDeployCostList().add(calculateDeployCost(serversSFC, traffic.getSfc()));
+        solutions.getDelayCostList().add(calculateDelayTotal(servers, links));
+        solutions.getDeployCostList().add(calculateDeployCost(servers));
         solutions.getDistanceList().add(calculateDistance(links));
         solutions.getHopsList().add(calculateHops(links));
         solutions.getBandwidthList().add(decimalFormat.format(calculateBandwidth(links)));
         solutions.getNumberInstancesList().add(calculateNumberIntances(traffic.getSfc(), servers));
-        solutions.getLoadTrafficList().add(decimalFormat.format(calculateLoadTraffic(traffic.getSfc(), links)));
-        solutions.getResourcesCostList().add(decimalFormat.format(calculateResources(serversSFC, traffic.getSfc())));
-        solutions.getLicencesCostList().add(decimalFormat.format(calculateLicencesCost(servers, traffic.getSfc())));
+        solutions.getLoadTrafficList().add(decimalFormat.format(calculateLoadTraffic(links)));
+        solutions.getResourcesCostList().add(decimalFormat.format(calculateResources(servers)));
+        solutions.getLicencesCostList().add(decimalFormat.format(calculateLicencesCost(servers)));
         solutions.getFragmentationList().add(decimalFormat.format(calculateResourceFragmentation(servers, links)));
         solutions.getAllLinksCostList().add(decimalFormat.format(calculateAllLinkCost(links)));
         solutions.getMaxUseLinkList().add(decimalFormat.format(calculateMaximunUseLink(links)));
-        solutions.getThroughputList().add(decimalFormat.format(calculateThroughput(links)));
+        solutions.getThroughputList().add(decimalFormat.format(calculateThroughput(traffics)));
 
         return solutions;
     }
@@ -79,19 +67,17 @@ public class ObjectiveFunctionService {
     Costo de la Energia en Dolares = suma de los costos(dolares) de energia utilizados en los nodos mas
     la energia en watts utilizada en cada servidor por el costo de energia correspondiente al servidor
      */
-    public double calculateEnergyCost(List<Node> nodes, List<Server> servers, SFC sfc) throws Exception {
+    public double calculateEnergyCost(List<Node> nodes, List<Server> servers) throws Exception {
         double energyCost = 0;
-        Server server;
         try {
             //Costo de energia consumida en el nodo mas energia consumida en el servidor donde se instalo el VNF
-            for (int i = 0; i < sfc.getVnfs().size(); i++) {
-                energyCost = energyCost +
-                        (servers.get(i).getEnergyPerCoreWatts() * sfc.getVnfs().get(i).getResourceCPU());
+            for (Server server : servers) {
+                energyCost = energyCost + server.getEnergyUsed() * server.getEnergyCost();
             }
 
-            //Costo de energia consumida en el nodo donde no hay Servidor se encuentra en la ruta
+            //Costo de energia consumida en el nodo que se encuentra en la ruta
             for (Node node : nodes)
-                energyCost = energyCost + node.getEnergyCost();
+                energyCost = energyCost + node.getEnergyCost() * node.getTrafficAmount();
 
             return energyCost;
         } catch (Exception e) {
@@ -109,8 +95,7 @@ public class ObjectiveFunctionService {
         try {
             //Costo de energia consumida en los nodos en dolares
             for (Node node : nodes)
-                if (node.getServer() != null)
-                    forwardingTrafficCost = forwardingTrafficCost + node.getEnergyCost();
+                forwardingTrafficCost = forwardingTrafficCost + node.getEnergyCost() * node.getTrafficAmount();
 
             //Ancho de banda de cada enlace por el costo en dolares por ancho de banda de cada enlace
             for (Link link : links)
@@ -132,16 +117,17 @@ public class ObjectiveFunctionService {
         }
     }
 
-    public int calculateDelayTotal(SFC sfc, List<Link> links) throws Exception {
+    public int calculateDelayTotal(List<Server> servers, List<Link> links) throws Exception {
         int latency = 0;
         try {
             //Suma del delay de procesamiento de cada VNF instalado
-            for (Vnf vnf : sfc.getVnfs())
-                latency = latency + vnf.getDelay();
+            for (Server server : servers)
+                for(Vnf vnf : server.getVnf())
+                    latency = latency + vnf.getDelay();
 
             //Suma del delay de cada enlace de la ruta
             for (Link link : links)
-                latency = latency + link.getDelay();
+                latency = latency + (link.getDelay() * link.getTrafficAmount());
 
             return latency;
         } catch (Exception e) {
@@ -150,14 +136,14 @@ public class ObjectiveFunctionService {
         }
     }
 
-    public int calculateDeployCost(List<Server> servers, SFC sfc) throws Exception {
+    public int calculateDeployCost(List<Server> servers) throws Exception {
         int deployCost = 0;
         try {
             //Suma del costo de deployar los VNFs en los servidores
-            for (int i = 0; i < sfc.getVnfs().size(); i++) {
-                deployCost = deployCost +
-                        (servers.get(i).getDeploy() + sfc.getVnfs().get(i).getDeploy());
-            }
+            for (Server server : servers)
+                for(Vnf vnf : server.getVnf())
+                    deployCost = deployCost + vnf.getDeploy() + server.getDeploy();
+
             return deployCost;
         } catch (Exception e) {
             logger.error("Error al calcular el costo de Intalacion o configuracion de los VNFs: " + e.getMessage());
@@ -170,7 +156,7 @@ public class ObjectiveFunctionService {
         try {
             // suma de las distancias de los enlaces
             for (Link link : links)
-                distance = distance + link.getDistance();
+                distance = distance + link.getDistance() * link.getTrafficAmount();
 
             return distance;
         } catch (Exception e) {
@@ -180,7 +166,12 @@ public class ObjectiveFunctionService {
     }
 
     public int calculateHops(List<Link> links) throws Exception {
+        int hops = 0;
         try {
+            // suma de las distancias de los enlaces
+            for (Link link : links)
+                hops = hops + link.getTrafficAmount();
+
             return links.size();
         } catch (Exception e) {
             logger.error("Error al calcular el numero de saltos: " + e.getMessage());
@@ -188,16 +179,16 @@ public class ObjectiveFunctionService {
         }
     }
 
-    public double calculateLicencesCost(List<Server> servers, SFC sfc) throws Exception {
+    public double calculateLicencesCost(List<Server> servers) throws Exception {
         double licencesCost = 0;
         try {
-            //Suma del costo de licencia de cada VNF
-            for (Vnf vnf : sfc.getVnfs())
-                licencesCost = licencesCost + vnf.getLicenceCost();
-
-            //Suma del costo de licencia de cada servidor
-            for (Server server : servers)
+            for (Server server : servers) {
+                //Suma del costo de licencia de cada servidor
                 licencesCost = server.getLicenceCost();
+                for (Vnf vnf : server.getVnf())
+                    //Suma del costo de licencia de cada VNF
+                    licencesCost = licencesCost + vnf.getLicenceCost();
+            }
 
             return licencesCost;
         } catch (Exception e) {
@@ -206,14 +197,15 @@ public class ObjectiveFunctionService {
         }
     }
 
-    public double calculateSLOCost(SFC sfc, List<Link> links, double sloCost, Integer delayMax) throws Exception {
+    public double calculateSLOCost(List<Server> servers, List<Link> links, List<Traffic> traffics) throws Exception {
+        double sloCost = 0;
         try {
             //Costo por superar el maximo delay
-            if (delayMax < calculateDelayTotal(sfc, links)) {
-                return sloCost;
-            } else {
-                return 0;
-            }
+            for (Traffic traffic : traffics)
+                if (traffic.isProcessed() && traffic.getDelayMaxSLA() < calculateDelayTotal(servers, links))
+                    sloCost = sloCost + traffic.getPenaltyCostSLO();
+
+            return sloCost;
         } catch (Exception e) {
             logger.error("Error al calcular el costo de SLO: " + e.getMessage());
             throw new Exception();
@@ -248,18 +240,15 @@ public class ObjectiveFunctionService {
         }
     }
 
-    public double calculateResources(List<Server> servers, SFC sfc) throws Exception {
+    public double calculateResources(List<Server> servers) throws Exception {
         double resourceCPUCost = 0, resourceRAMCost = 0, resourceStorageCost = 0;
         double resourceTotalCost;
         try {
             //Suma de los recursos utilizados de cada servidor
-            for (int i = 0; i < sfc.getVnfs().size(); i++) {
-                    resourceCPUCost = resourceCPUCost +
-                            (sfc.getVnfs().get(i).getResourceCPU() * servers.get(i).getResourceCPUCost());
-                    resourceRAMCost = resourceRAMCost +
-                            (sfc.getVnfs().get(i).getResourceRAM() * servers.get(i).getResourceRAMCost());
-                    resourceStorageCost = resourceStorageCost +
-                            (sfc.getVnfs().get(i).getResourceStorage() * servers.get(i).getResourceStorageCost());
+            for (Server server : servers) {
+                    resourceCPUCost = resourceCPUCost + server.getResourceCPUUsed();
+                    resourceRAMCost = resourceRAMCost + server.getResourceRAMUsed();
+                    resourceStorageCost = resourceStorageCost + server.getResourceStorageUsed();
                 }
 
             resourceTotalCost = resourceCPUCost + resourceRAMCost + resourceStorageCost;
@@ -284,7 +273,6 @@ public class ObjectiveFunctionService {
         }
     }
 
-    //Verificar formula?
     public double calculateMaximunUseLink(List<Link> links) throws Exception {
         double maximunUseLink;
         List<Double> bandwidths = new ArrayList<>();
@@ -304,7 +292,6 @@ public class ObjectiveFunctionService {
         }
     }
 
-    //Verificar formula?
     public double calculateAllLinkCost(List<Link> links) throws Exception {
         double linksCost = 0;
         try {
@@ -319,21 +306,13 @@ public class ObjectiveFunctionService {
         }
     }
 
-    //Verificar formula?
-    public double calculateLoadTraffic(SFC sfc, List<Link> links) throws Exception {
-        int delayTotal;
-        double bandwidth = 0;
-        double loadTraffic;
+    public double calculateLoadTraffic(List<Link> links) throws Exception {
+        double loadTraffic = 0;
         try {
-            //Delay total
-            delayTotal = calculateDelayTotal(sfc, links);
-
-            //Ancho de Banda total
+            //suma de latencia por ancho de banda
             for (Link link : links)
-                bandwidth = bandwidth + link.getBandwidthUsed();
+                loadTraffic = loadTraffic + (link.getDelay() * link.getBandwidthUsed());
 
-            //anchi de banda total por delay total
-            loadTraffic = bandwidth * delayTotal;
             return loadTraffic;
         } catch (Exception e) {
             logger.error("Error al calcular el Trafico de Carga: " + e.getMessage());
@@ -341,7 +320,7 @@ public class ObjectiveFunctionService {
         }
     }
 
-    //No tiene sentido, No se reutilizan VNF entre los traficos
+    //Depende de la implementacion (Reutilizar VNF entre varios flujos)
     public int calculateNumberIntances(SFC sfc, List<Server> servers) throws Exception {
         int instances = 0;
         try {
@@ -352,13 +331,20 @@ public class ObjectiveFunctionService {
         }
     }
 
-    //Formula?
-    public double calculateThroughput(List<Link> links) throws Exception {
-        double throughput = 0;
+    //Formula (Calculo de ancho de banda inicial antendidos sobre el total)
+    public double calculateThroughput(List<Traffic> traffics) throws Exception {
+        double successful = 0;
+        double total = 0;
+        double throughput;
         try {
             //Suma del ancho de banda de cada enlace de la ruta
-            for (Link link : links)
-                throughput = throughput + link.getBandwidthUsed();
+            for (Traffic traffic : traffics) {
+                total = total + traffic.getBandwidth();
+                if (traffic.isProcessed()) {
+                    successful = successful + traffic.getBandwidth();
+                }
+            }
+                throughput = successful / total;
 
             return throughput;
         } catch (Exception e) {

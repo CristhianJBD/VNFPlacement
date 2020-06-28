@@ -26,6 +26,7 @@ public class TrafficService {
         int sfcSize;
         boolean aux = false;
         try {
+
             Traffic traffic = new Traffic();
             traffic.setBandwidth(rn.nextInt
                     (conf.getTrafficBandwidthMax()-conf.getTrafficBandwidthMin() + 1) + conf.getTrafficBandwidthMin());
@@ -33,6 +34,7 @@ public class TrafficService {
                     (conf.getTrafficDelaySlaMax()- conf.getTrafficDelaySlaMin() + 1) + conf.getTrafficDelaySlaMin());
             traffic.setPenaltyCostSLO(rn.nextInt
                     (conf.getTrafficPenaltySloMax()-conf.getTrafficPenaltySloMin() + 1) + conf.getTrafficPenaltySloMin());
+            traffic.setProcessed(false);
 
             arrayNode = nodesMap.values().toArray();
             while (!aux) {

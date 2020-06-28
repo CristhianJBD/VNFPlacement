@@ -6,12 +6,12 @@ Matriz Nodos
 0 0 1 0 1 0
 0 0 0 0 0 1
 0 0 0 0 0 0
-Matriz de Delay  !!!ms cite 461
-0 1800 0 2000 0 0
-0 0 1900 1850 0 0
-0 0 0 0 1810 0
-0 0 1970 0 1993 0
-0 0 0 0 0 1840
+Matriz de Delay  !!!segundos cite 461
+0 1 0 2 0 0
+0 0 2 3 0 0
+0 0 0 0 1 0
+0 0 2 0 4 0
+0 0 0 0 0 2
 0 0 0 0 0 0
 Matriz de Distancia
 0 80 0 60 0 0
@@ -24,7 +24,7 @@ Matriz de Ancho de Banda  !!!Mbit cite 461
 0 10000 0 12000 0 0
 0 0 15000 9000 0 0
 0 0 0 0 9500 0
-0 0 1100 0 10500 0
+0 0 11000 0 10500 0
 0 0 0 0 0 10700
 0 0 0 0 0 0
 Matriz de costo por unidad de Mbit !!!$/Mb cite 461

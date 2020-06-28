@@ -23,6 +23,8 @@ public class Traffic {
     //Cadena de Servicio (Secuencias de VNF)
     private SFC sfc;
 
+    private boolean processed;
+
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder("Traffic: ");

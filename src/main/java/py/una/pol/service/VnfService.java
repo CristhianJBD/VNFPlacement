@@ -34,15 +34,18 @@ public class VnfService {
 
     public boolean placement() {
         ResultPath resultPath;
-        Traffic traffic;
+        List<Traffic> traffics = new ArrayList<>();
         try {
             data.loadData();
             shortestPathMap = data.shortestPathMap;
             nodesMap = data.nodesMap;
             linksMap = data.linksMap;
 
-            for (int i = 0; i <= conf.getNumberSolutions(); i++) {
-                traffic = trafficService.generateRandomtraffic(nodesMap, data.vnfs);
+            for (int i = 0; i < conf.getNumberSolutions(); i++)
+                traffics.add(trafficService.generateRandomtraffic(nodesMap, data.vnfs));
+
+            int i = 0;
+            for (Traffic traffic : traffics) {
                 graphMultiStage = createGraphtMultiStage(traffic);
                 if (graphMultiStage == null) {
                     logger.warn(i + "- No se pudo crear el Grafo Multi-Estados: " +
@@ -53,14 +56,16 @@ public class VnfService {
                         logger.warn(i + "- No se pudo encontrar una solucion: " +
                                 "NodoOrigen: " + traffic.getNodeOrigin().getId() + ", NodoDestino: " + traffic.getNodeDestiny().getId());
                     } else {
+                        traffic.setProcessed(true);
                         logger.info(i + "- Solucion: " +
                                 "NodoOrigen: " + traffic.getNodeOrigin().getId() + ", NodoDestino: " + traffic.getNodeDestiny().getId());
 
-                        ofs.solutionFOs(traffic, resultPath, nodesMap, linksMap);
                     }
                 }
+                i++;
             }
 
+            ofs.solutionFOs(nodesMap, linksMap, traffics);
             logger.info(ofs.solutions);
         } catch (Exception e) {
             logger.error("Error VNF placement: " + e.getMessage());
@@ -217,7 +222,7 @@ public class VnfService {
                     //la ruta es valida si se llega hasta el nodo destino
                     if (traffic.getNodeDestiny().getId().equals(randomNodeId)) {
                         if (!isResourceAvailableLink(originNodeId, randomNodeId,
-                                bandwidtCurrent, linksMapAux, shortestPath))
+                                bandwidtCurrent, linksMapAux, nodesMapAux, shortestPath))
                             break;
                         else {
                             validPlacement = true;
@@ -290,8 +295,16 @@ public class VnfService {
                     bandwidtUsed = link.getBandwidthUsed() + bandwidtCurrent;
                     if (link.getBandwidth() < bandwidtUsed)
                         return false;
-                    else
+                    else {
                         link.setBandwidthUsed(bandwidtUsed);
+                        link.setTrafficAmount(link.getTrafficAmount() + 1);
+                    }
+                }
+                if(shortestPath.getLinks().size() != 0) {
+                    for (int i = 0; i < shortestPath.getNodes().size() - 1; i++) {
+                        node = nodesMapAux.get(shortestPath.getNodes().get(i));
+                        node.setTrafficAmount(node.getTrafficAmount() + 1);
+                    }
                 }
             }
             return true;
@@ -302,8 +315,8 @@ public class VnfService {
     }
 
     private boolean isResourceAvailableLink(String nodeOriginId, String nodeDestinyId, double bandwidtCurrent,
-                                            Map<String, Link> linksMapAux, ShortestPath shortestPath) throws Exception {
-        Link link;
+                                            Map<String, Link> linksMapAux, Map<String, Node> nodesMapAux, ShortestPath shortestPath) throws Exception {
+        Link link; Node node;
         double bandwidtUsed;
         try {
             if (!nodeDestinyId.equals(nodeOriginId)) {
@@ -312,8 +325,16 @@ public class VnfService {
                     bandwidtUsed = link.getBandwidthUsed() + bandwidtCurrent;
                     if (link.getBandwidth() < bandwidtUsed) {
                         return false;
-                    } else
+                    } else {
                         link.setBandwidthUsed(bandwidtUsed);
+                        link.setTrafficAmount(link.getTrafficAmount() + 1);
+                    }
+                }
+                if(shortestPath.getLinks().size() != 0) {
+                    for (String id : shortestPath.getNodes()) {
+                        node = nodesMapAux.get(id);
+                        node.setTrafficAmount(node.getTrafficAmount() + 1);
+                    }
                 }
             }
             return true;
@@ -359,6 +380,7 @@ public class VnfService {
                 Node nodeAux = new Node();
                 nodeAux.setId(node.getId());
                 nodeAux.setEnergyCost(node.getEnergyCost());
+                nodeAux.setTrafficAmount(node.getTrafficAmount());
                 if (node.getServer() != null) {
                     Server server = new Server(node.getServer());
                     nodeAux.setServer(server);
@@ -384,6 +406,7 @@ public class VnfService {
                 linkAux.setBandwidth(link.getBandwidth());
                 linkAux.setBandwidthUsed(link.getBandwidthUsed());
                 linkAux.setBandwidthCost(link.getBandwidthCost());
+                linkAux.setTrafficAmount(link.getTrafficAmount());
                 linksMapAux.put(linkAux.getId(), linkAux);
             }
             return linksMapAux;
