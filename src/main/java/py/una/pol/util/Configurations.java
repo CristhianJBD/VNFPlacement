@@ -28,8 +28,10 @@ public class Configurations {
     private String separator;
     @Value("${matrix.name}")
     private String matrixName;
-    @Value("${number.solutions}")
+    @Value("${number.solution}")
     private Integer numberSolutions;
+    @Value("${number.traffic}")
+    private Integer numberTraffic;
     @Value("${k.shortest}")
     private Integer k;
     @Value("${retries.solution}")

@@ -6,10 +6,10 @@ import lombok.Data;
 public class Traffic {
 
     //Nodo origen
-    private Node nodeOrigin;
+    private String nodeOriginId;
 
     //Nodo Destino
-    private Node nodeDestiny;
+    private String nodeDestinyId;
 
     //Ancho de Banda Inicial
     private int bandwidth;
@@ -28,8 +28,8 @@ public class Traffic {
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder("Traffic: ");
-        sb.append("nodeOrigin=").append(nodeOrigin.getId());
-        sb.append(", nodeDestiny=").append(nodeDestiny.getId());
+        sb.append("nodeOriginId=").append(nodeOriginId);
+        sb.append(", nodeDestinyId=").append(nodeDestinyId);
         sb.append(", bandwidth=").append(bandwidth);
         sb.append(", delayMaxSLA=").append(delayMaxSLA);
         sb.append(", penaltyCostSLO=").append(penaltyCostSLO);

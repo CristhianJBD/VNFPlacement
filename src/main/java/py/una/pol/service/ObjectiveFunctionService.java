@@ -27,7 +27,6 @@ public class ObjectiveFunctionService {
     public Solution solutionFOs(Map<String, Node> nodesMap, Map<String, Link> linksMap,
                                 List<Traffic> traffics)
             throws Exception {
-        Traffic traffic = new Traffic();
         DecimalFormat decimalFormat = new DecimalFormat("#.###");
         decimalFormat.setRoundingMode(RoundingMode.CEILING);
         List<Server> servers = new ArrayList<>();
@@ -51,7 +50,7 @@ public class ObjectiveFunctionService {
         solutions.getDistanceList().add(calculateDistance(links));
         solutions.getHopsList().add(calculateHops(links));
         solutions.getBandwidthList().add(decimalFormat.format(calculateBandwidth(links)));
-        solutions.getNumberInstancesList().add(calculateNumberIntances(traffic.getSfc(), servers));
+        solutions.getNumberInstancesList().add(calculateNumberIntances(servers));
         solutions.getLoadTrafficList().add(decimalFormat.format(calculateLoadTraffic(links)));
         solutions.getResourcesCostList().add(decimalFormat.format(calculateResources(servers)));
         solutions.getLicencesCostList().add(decimalFormat.format(calculateLicencesCost(servers)));
@@ -172,7 +171,7 @@ public class ObjectiveFunctionService {
             for (Link link : links)
                 hops = hops + link.getTrafficAmount();
 
-            return links.size();
+            return hops;
         } catch (Exception e) {
             logger.error("Error al calcular el numero de saltos: " + e.getMessage());
             throw new Exception();
@@ -321,10 +320,13 @@ public class ObjectiveFunctionService {
     }
 
     //Depende de la implementacion (Reutilizar VNF entre varios flujos)
-    public int calculateNumberIntances(SFC sfc, List<Server> servers) throws Exception {
+    public int calculateNumberIntances(List<Server> servers) throws Exception {
         int instances = 0;
         try {
-            return sfc.getVnfs().size();
+            for (Server server : servers){
+                instances =instances + server.getVnf().size();
+            }
+            return instances;
         } catch (Exception e) {
             logger.error("Error al calcular el numero de instacias: " + e.getMessage());
             throw new Exception();
