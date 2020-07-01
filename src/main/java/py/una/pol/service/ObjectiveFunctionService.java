@@ -4,7 +4,7 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import py.una.pol.dto.NFVdto.*;
-import py.una.pol.dto.Solution;
+import py.una.pol.dto.Solutions;
 import py.una.pol.util.Configurations;
 
 import java.math.RoundingMode;
@@ -22,11 +22,11 @@ public class ObjectiveFunctionService {
     @Autowired
     private Configurations configuration;
 
-    Solution solutions = new Solution();
+    Solutions solutions = new Solutions();
 
-    public Solution solutionFOs(Map<String, Node> nodesMap, Map<String, Link> linksMap,
-                                List<Traffic> traffics)
-            throws Exception {
+    public Solutions solutionFOs(Map<String, Node> nodesMap, Map<String, Link> linksMap,
+                                 List<Traffic> traffics) throws Exception {
+
         DecimalFormat decimalFormat = new DecimalFormat("#.###");
         decimalFormat.setRoundingMode(RoundingMode.CEILING);
         List<Server> servers = new ArrayList<>();

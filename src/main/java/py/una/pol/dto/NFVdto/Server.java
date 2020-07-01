@@ -64,7 +64,6 @@ public class Server {
 
     public Server(Server server) {
         this.id = server.getId();
-        this.vnf = server.getVnf();
         this.licenceCost = server.getLicenceCost();
         this.deploy = server.getDeploy();
         this.energyCost = server.getEnergyCost();
@@ -80,6 +79,21 @@ public class Server {
         this.resourceStorageUsed = server.getResourceStorageUsed();
         this.resourceCPUUsed = server.getResourceCPUUsed();
         this.energyUsed = server.getEnergyUsed();
+
+        List<Vnf> vnfs = new ArrayList<>();
+        for(Vnf vnf : server.getVnf()){
+            Vnf vnfToCopy = new Vnf();
+            vnfToCopy.setId(vnf.getId());
+            vnfToCopy.setDelay(vnf.getDelay());
+            vnfToCopy.setDeploy(vnf.getDeploy());
+            vnfToCopy.setBandwidthFactor(vnf.getBandwidthFactor());
+            vnfToCopy.setLicenceCost(vnf.getLicenceCost());
+            vnfToCopy.setResourceCPU(vnf.getResourceCPU());
+            vnfToCopy.setResourceRAM(vnf.getResourceRAM());
+            vnfToCopy.setResourceStorage(vnf.getResourceStorage());
+            vnfs.add(vnfToCopy);
+        }
+        this.vnf = vnfs;
     }
 
     @Override

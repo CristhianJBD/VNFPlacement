@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Data
-public class Solution {
+public class Solutions {
 
     private List<String> energyCostList = new ArrayList<>();
     private List<String> forwardingTrafficCostList = new ArrayList<>();

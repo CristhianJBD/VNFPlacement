@@ -12,6 +12,7 @@ import py.una.pol.dto.NFVdto.*;
 import py.una.pol.util.Configurations;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -38,31 +39,34 @@ public class VnfService {
         try {
             data.loadData();
             shortestPathMap = data.shortestPathMap;
-            nodesMap = data.nodesMap;
-            linksMap = data.linksMap;
 
-            traffics = trafficService.generateRandomtraffic(nodesMap, data.vnfs);
-            int count = 1;
+            traffics = trafficService.generateRandomtraffic(data.nodesMap, data.vnfs);
+            for(int i = 0; i < conf.getNumberSolutions(); i++) {
+                nodesMap = loadNodesMapAux(data.nodesMap);
+                linksMap = loadLinkMapAux(data.linksMap);
+                int count = 1;
+                logger.info("Tanda: " + i);
                 for (Traffic traffic : traffics) {
                     graphMultiStage = createGraphtMultiStage(traffic);
                     if (graphMultiStage == null) {
-                        logger.warn(count + "- No se pudo crear el Grafo Multi-Estados: " +
-                                "NodoOrigen: " + traffic.getNodeOriginId() + ", NodoDestino: " + traffic.getNodeDestinyId());
+                        logger.warn(count + "- No Grafo Multi-Estados: " +
+                                "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
                     } else {
                         resultPath = provisionTraffic(traffic);
                         if (resultPath == null) {
-                            logger.warn(count + "- No se pudo encontrar una solucion: " +
-                                    "NodoOrigen: " + traffic.getNodeOriginId() + ", NodoDestino: " + traffic.getNodeDestinyId());
+                            logger.warn(count + "- No Solucion: " +
+                                    "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
                         } else {
                             traffic.setProcessed(true);
                             logger.info(count + "- Solucion: " +
-                                    "NodoOrigen: " + traffic.getNodeOriginId() + ", NodoDestino: " + traffic.getNodeDestinyId());
+                                    "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
                         }
                     }
                     count++;
                 }
                 ofs.solutionFOs(nodesMap,linksMap, traffics);
-                logger.info(ofs.solutions);
+            }
+            logger.info(ofs.solutions);
         } catch (Exception e) {
             logger.error("Error VNF placement: " + e.getMessage());
         }
@@ -201,8 +205,10 @@ public class VnfService {
             while (!validPlacement && retries <= conf.getRetriesSolution()) {
                 originNodeId = traffic.getNodeOriginId();
                 bandwidtCurrent = traffic.getBandwidth();
-                nodesMapAux = loadNodesMapAux();
-                linksMapAux = loadLinkMapAux();
+                nodesMapAux = loadNodesMapAux(this.nodesMap);
+                linksMapAux = loadLinkMapAux(this.linksMap);
+
+                nodesMapAux.get("node2").getServer().getVnf().add(new Vnf());
                 retries = retries + 1;
                 indexVnf = 0;
 
@@ -369,7 +375,7 @@ public class VnfService {
         return node;
     }
 
-    private Map<String, Node> loadNodesMapAux() throws Exception {
+    private Map<String, Node> loadNodesMapAux(Map<String, Node> nodesMap) throws Exception {
         Map<String, Node> nodesMapAux = new HashMap<>();
         try {
             for (Node node : nodesMap.values()) {
@@ -391,7 +397,7 @@ public class VnfService {
     }
 
 
-    private Map<String, Link> loadLinkMapAux() throws Exception {
+    private Map<String, Link> loadLinkMapAux(Map<String, Link> linksMap) throws Exception {
         Map<String, Link> linksMapAux = new HashMap<>();
         try {
             for (Link link : linksMap.values()) {
