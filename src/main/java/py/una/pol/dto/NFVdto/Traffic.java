@@ -1,6 +1,7 @@
 package py.una.pol.dto.NFVdto;
 
 import lombok.Data;
+import py.una.pol.dto.ResultPath;
 
 @Data
 public class Traffic {
@@ -23,7 +24,11 @@ public class Traffic {
     //Cadena de Servicio (Secuencias de VNF)
     private SFC sfc;
 
+    //Indica si el trafico fue procesado o no
     private boolean processed;
+
+    //Solucion del trafico
+    private ResultPath resultPath;
 
     @Override
     public String toString() {

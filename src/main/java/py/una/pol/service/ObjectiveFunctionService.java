@@ -4,6 +4,8 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import py.una.pol.dto.NFVdto.*;
+import py.una.pol.dto.Path;
+import py.una.pol.dto.ResultPath;
 import py.una.pol.dto.Solutions;
 import py.una.pol.util.Configurations;
 
@@ -43,7 +45,7 @@ public class ObjectiveFunctionService {
         solutions.getForwardingTrafficCostList().add(decimalFormat.format(
                 calculateForwardingTrafficCost(nodes, links)));
         solutions.getSloCostList().add(decimalFormat.format(
-                calculateSLOCost(servers, links, traffics)));
+                calculateSLOCost(linksMap, traffics)));
         solutions.getHostSizeList().add(calculateHostSize(servers));
         solutions.getDelayCostList().add(calculateDelayTotal(servers, links));
         solutions.getDeployCostList().add(calculateDeployCost(servers));
@@ -69,12 +71,13 @@ public class ObjectiveFunctionService {
     public double calculateEnergyCost(List<Node> nodes, List<Server> servers) throws Exception {
         double energyCost = 0;
         try {
-            //Costo de energia consumida en el nodo mas energia consumida en el servidor donde se instalo el VNF
+            //Costo de energia consumida en los servidores donde se instalaron los VNFs
             for (Server server : servers) {
                 energyCost = energyCost + server.getEnergyUsed() * server.getEnergyCost();
             }
 
-            //Costo de energia consumida en el nodo que se encuentra en la ruta
+            //Costo monetario de energia de los nodos que se encuentran
+            // en la ruta por la cantidad de flujos que pasan por el nodo
             for (Node node : nodes)
                 energyCost = energyCost + node.getEnergyCost() * node.getTrafficAmount();
 
@@ -195,14 +198,27 @@ public class ObjectiveFunctionService {
             throw new Exception();
         }
     }
-
-    public double calculateSLOCost(List<Server> servers, List<Link> links, List<Traffic> traffics) throws Exception {
+// Analizar mejor
+    public double calculateSLOCost(Map<String, Link> linksMap, List<Traffic> traffics) throws Exception {
         double sloCost = 0;
+        int delayTotal;
         try {
+
             //Costo por superar el maximo delay
-            for (Traffic traffic : traffics)
-                if (traffic.isProcessed() && traffic.getDelayMaxSLA() < calculateDelayTotal(servers, links))
-                    sloCost = sloCost + traffic.getPenaltyCostSLO();
+            for(Traffic traffic : traffics){
+                delayTotal = 0;
+                if(traffic.isProcessed()) {
+                    for (Path path : traffic.getResultPath().getPaths())
+                        for (String linkId : path.getShortestPath().getLinks())
+                            delayTotal = delayTotal + linksMap.get(linkId).getDelay();
+
+                    for (Vnf vnf : traffic.getSfc().getVnfs())
+                        delayTotal = delayTotal + vnf.getDelay();
+
+                    if (traffic.getDelayMaxSLA() < delayTotal)
+                        sloCost = sloCost + traffic.getPenaltyCostSLO();
+                }
+            }
 
             return sloCost;
         } catch (Exception e) {
@@ -337,7 +353,6 @@ public class ObjectiveFunctionService {
     public double calculateThroughput(List<Traffic> traffics) throws Exception {
         double successful = 0;
         double total = 0;
-        double throughput;
         try {
             //Suma del ancho de banda de cada enlace de la ruta
             for (Traffic traffic : traffics) {
@@ -346,9 +361,7 @@ public class ObjectiveFunctionService {
                     successful = successful + traffic.getBandwidth();
                 }
             }
-                throughput = successful / total;
-
-            return throughput;
+            return (successful / total) * 100;
         } catch (Exception e) {
             logger.error("Error al calcular el throughput: " + e.getMessage());
             throw new Exception();

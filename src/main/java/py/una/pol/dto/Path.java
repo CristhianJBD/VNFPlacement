@@ -9,4 +9,8 @@ public class Path {
 
     private ShortestPath shortestPath;
 
+    public Path(String id, ShortestPath shortestPath) {
+        this.id = id;
+        this.shortestPath = shortestPath;
+    }
 }

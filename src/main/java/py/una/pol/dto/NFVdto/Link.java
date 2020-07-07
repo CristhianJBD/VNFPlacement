@@ -26,6 +26,19 @@ public class Link {
     //Cantidad de flujos que pasan por el link
     private int trafficAmount;
 
+    public Link() {
+    }
+
+    public Link(Link link) {
+        this.id = link.getId();
+        this.delay = link.getDelay();
+        this.distance = link.getDistance();
+        this.bandwidth = link.getBandwidth();
+        this.bandwidthCost = link.getBandwidthCost();
+        this.bandwidthUsed = link.getBandwidthUsed();
+        this.trafficAmount = link.getTrafficAmount();
+    }
+
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder("Link: ");

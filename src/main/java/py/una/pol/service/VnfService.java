@@ -49,11 +49,15 @@ public class VnfService {
                 for (Traffic traffic : traffics) {
                     graphMultiStage = createGraphtMultiStage(traffic);
                     if (graphMultiStage == null) {
+                        traffic.setProcessed(false);
+                        traffic.setResultPath(null);
                         logger.warn(count + "- No Grafo Multi-Estados: " +
                                 "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
                     } else {
                         resultPath = provisionTraffic(traffic);
+                        traffic.setResultPath(resultPath);
                         if (resultPath == null) {
+                            traffic.setProcessed(false);
                             logger.warn(count + "- No Solucion: " +
                                     "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
                         } else {
@@ -74,12 +78,12 @@ public class VnfService {
     }
 
     private DirectedGraph<String, KPath> createGraphtMultiStage(Traffic traffic) throws Exception {
-        List<Node> states = new ArrayList<>();
         DirectedGraph<String, KPath> gMStage = new DefaultDirectedGraph<>(KPath.class);
-        List<ShortestPath> kShortestPath;
-        KPath path;
         int numberStages = traffic.getSfc().getVnfs().size();
-        Node nMSDestiny, nMSOrigin;
+        List<Node> states = new ArrayList<>();
+        List<ShortestPath> kShortestPath;
+        String nMSDestinyId, nMSOriginId;
+        KPath path;
         Vnf vnf;
         try {
             //Se verifica si existe alguna ruta entre el origin y el destino del trafico
@@ -100,17 +104,17 @@ public class VnfService {
                     states.add(node);
                     if (isResourceAvailableServer(node.getServer(), vnf)) {
                         //Se cambia la referencia del nodo guardando en otro objeto
-                        nMSDestiny = changeId(node, 1);
+                        nMSDestinyId = changeId(node.getId(), 1);
                         if (kShortestPath != null && kShortestPath.size() > 0) {
-                            path = new KPath(kShortestPath, traffic.getNodeOriginId() + "-" + nMSDestiny.getId());
+                            path = new KPath(kShortestPath, traffic.getNodeOriginId() + "-" + nMSDestinyId);
 
                             //se guarda el nodo en el grafo multiestados con ID = numero de etapa y el id del nodo
-                            gMStage.addVertex(nMSDestiny.getId());
+                            gMStage.addVertex(nMSDestinyId);
 
                             //Se crea el enlace del grafo multi estados
                             // que seria el camino (conjunto de IDs de los nodos y enlaces del grafo principal)
                             // entre el par de nodos del grafo multi estados
-                            gMStage.addEdge(traffic.getNodeOriginId(), nMSDestiny.getId(), path);
+                            gMStage.addEdge(traffic.getNodeOriginId(), nMSDestinyId, path);
 
                             // Si el nodo origen es igual al nodo destino
                         } else if (traffic.getNodeOriginId().equals(node.getId())) {
@@ -118,9 +122,9 @@ public class VnfService {
                             ShortestPath shortestPath = new ShortestPath();
                             shortestPath.getNodes().add(node.getId());
                             kShortestPath.add(shortestPath);
-                            path = new KPath(kShortestPath, traffic.getNodeOriginId() + "-" + nMSDestiny.getId());
-                            gMStage.addVertex(nMSDestiny.getId());
-                            gMStage.addEdge(traffic.getNodeOriginId(), nMSDestiny.getId(), path);
+                            path = new KPath(kShortestPath, traffic.getNodeOriginId() + "-" + nMSDestinyId);
+                            gMStage.addVertex(nMSDestinyId);
+                            gMStage.addEdge(traffic.getNodeOriginId(), nMSDestinyId, path);
                         }
                     }
                 }
@@ -130,25 +134,25 @@ public class VnfService {
                 vnf = traffic.getSfc().getVnfs().get(i);
                 for (Node nodeOrigin : states) {
                     for (Node nodeDestiny : states) {
-                        nMSOrigin = changeId(nodeOrigin, i);
-                        nMSDestiny = changeId(nodeDestiny, i + 1);
+                        nMSOriginId = changeId(nodeOrigin.getId(), i);
+                        nMSDestinyId = changeId(nodeDestiny.getId(), i + 1);
                         if (isResourceAvailableServer(nodeDestiny.getServer(), vnf) &&
-                                gMStage.containsVertex(nMSOrigin.getId())) {
+                                gMStage.containsVertex(nMSOriginId)) {
                             kShortestPath = shortestPathMap.get(nodeOrigin.getId() + "-" + nodeDestiny.getId());
 
                             if (kShortestPath != null && kShortestPath.size() > 0) {
-                                path = new KPath(kShortestPath, nMSOrigin.getId() + "-" + nMSDestiny.getId());
-                                gMStage.addVertex(nMSDestiny.getId());
-                                gMStage.addEdge(nMSOrigin.getId(), nMSDestiny.getId(), path);
+                                path = new KPath(kShortestPath, nMSOriginId + "-" + nMSDestinyId);
+                                gMStage.addVertex(nMSDestinyId);
+                                gMStage.addEdge(nMSOriginId, nMSDestinyId, path);
                             }
                             else if (nodeOrigin.equals(nodeDestiny)) {
                                 kShortestPath = new ArrayList<>();
                                 ShortestPath shortestPath = new ShortestPath();
                                 shortestPath.getNodes().add(nodeDestiny.getId());
                                 kShortestPath.add(shortestPath);
-                                path = new KPath(kShortestPath, nMSOrigin.getId() + "-" + nMSDestiny.getId());
-                                gMStage.addVertex(nMSDestiny.getId());
-                                gMStage.addEdge(nMSOrigin.getId(), nMSDestiny.getId(), path);
+                                path = new KPath(kShortestPath, nMSOriginId + "-" + nMSDestinyId);
+                                gMStage.addVertex(nMSDestinyId);
+                                gMStage.addEdge(nMSOriginId, nMSDestinyId, path);
                             }
                         }
                     }
@@ -156,19 +160,19 @@ public class VnfService {
             }
             //Crear enlaces entre la ultima etapa y el destino
             for (Node node : states) {
-                nMSOrigin = changeId(node, numberStages);
-                if(gMStage.containsVertex(nMSOrigin.getId())) {
+                nMSOriginId = changeId(node.getId(), numberStages);
+                if(gMStage.containsVertex(nMSOriginId)) {
                     kShortestPath = shortestPathMap.get(node.getId() + "-" + traffic.getNodeDestinyId());
                     if (kShortestPath != null && kShortestPath.size() > 0) {
-                        path = new KPath(kShortestPath, nMSOrigin.getId() + "-" + traffic.getNodeDestinyId());
-                        gMStage.addEdge(nMSOrigin.getId(), traffic.getNodeDestinyId(), path);
+                        path = new KPath(kShortestPath, nMSOriginId + "-" + traffic.getNodeDestinyId());
+                        gMStage.addEdge(nMSOriginId, traffic.getNodeDestinyId(), path);
                     } else if (node.getId().equals(traffic.getNodeDestinyId())) {
                         kShortestPath = new ArrayList<>();
                         ShortestPath shortestPath = new ShortestPath();
                         shortestPath.getNodes().add(node.getId());
                         kShortestPath.add(shortestPath);
-                        path = new KPath(kShortestPath, nMSOrigin.getId() + "-" + traffic.getNodeDestinyId());
-                        gMStage.addEdge(changeId(node, numberStages).getId(), traffic.getNodeDestinyId(), path);
+                        path = new KPath(kShortestPath, nMSOriginId + "-" + traffic.getNodeDestinyId());
+                        gMStage.addEdge(changeId(node.getId(), numberStages), traffic.getNodeDestinyId(), path);
                     }
                 }
             }
@@ -193,13 +197,13 @@ public class VnfService {
         Random rn = new Random();
         Map<String, Node> nodesMapAux = null;
         Map<String, Link> linksMapAux = null;
-        List<Path> pathNodeIds = new ArrayList<>();
+        List<Path> pathNodeIds = null;
+        List<String> serverVnf = null;
+        List<ShortestPath> kShortestPath;
         double bandwidtCurrent;
         boolean validPlacement = false;
         int retries = 0, indexVnf;
-        List<ShortestPath> kShortestPath;
         ShortestPath shortestPath;
-        List<String> serverVnf = new ArrayList<>();
         Vnf vnf;
         try {
             while (!validPlacement && retries <= conf.getRetriesSolution()) {
@@ -207,8 +211,9 @@ public class VnfService {
                 bandwidtCurrent = traffic.getBandwidth();
                 nodesMapAux = loadNodesMapAux(this.nodesMap);
                 linksMapAux = loadLinkMapAux(this.linksMap);
+                pathNodeIds = new ArrayList<>();
+                serverVnf = new ArrayList<>();
 
-                nodesMapAux.get("node2").getServer().getVnf().add(new Vnf());
                 retries = retries + 1;
                 indexVnf = 0;
 
@@ -224,11 +229,11 @@ public class VnfService {
                     //la ruta es valida si se llega hasta el nodo destino
                     if (traffic.getNodeDestinyId().equals(randomNodeId)) {
                         if (!isResourceAvailableLink(originNodeId, randomNodeId,
-                                bandwidtCurrent, linksMapAux, nodesMapAux, shortestPath))
+                                bandwidtCurrent, linksMapAux, nodesMapAux, shortestPath)) {
                             break;
-                        else {
+                        }else {
                             validPlacement = true;
-                            pathNodeIds.add(resultPath(kPath.getId(), shortestPath));
+                            pathNodeIds.add(new Path(kPath.getId(), shortestPath));
                         }
                     } else {
                         vnf = traffic.getSfc().getVnfs().get(indexVnf);
@@ -237,7 +242,7 @@ public class VnfService {
                             break;
                         else {
                             bandwidtCurrent = vnf.getBandwidthFactor() * bandwidtCurrent;
-                            pathNodeIds.add(resultPath(kPath.getId(), shortestPath));
+                            pathNodeIds.add(new Path(kPath.getId(), shortestPath));
                             originNodeId = randomNodeId;
                             indexVnf = indexVnf + 1;
                         }
@@ -367,29 +372,15 @@ public class VnfService {
     }
 
 
-    private Node changeId(Node originalNode, int stage) {
-        Node node = new Node();
-        node.setId("s" + stage + originalNode.getId());
-        node.setEnergyCost(originalNode.getEnergyCost());
-        node.setServer(originalNode.getServer());
-        return node;
+    private String changeId(String originalNodeId, int stage) {
+        return "s" + stage + originalNodeId;
     }
 
     private Map<String, Node> loadNodesMapAux(Map<String, Node> nodesMap) throws Exception {
-        Map<String, Node> nodesMapAux = new HashMap<>();
         try {
-            for (Node node : nodesMap.values()) {
-                Node nodeAux = new Node();
-                nodeAux.setId(node.getId());
-                nodeAux.setEnergyCost(node.getEnergyCost());
-                nodeAux.setTrafficAmount(node.getTrafficAmount());
-                if (node.getServer() != null) {
-                    Server server = new Server(node.getServer());
-                    nodeAux.setServer(server);
-                }
-                nodesMapAux.put(nodeAux.getId(), nodeAux);
-            }
-            return nodesMapAux;
+            return nodesMap.entrySet().stream()
+                    .collect(Collectors.toMap(Map.Entry::getKey, e -> new Node(e.getValue())));
+
         } catch (Exception e) {
             logger.error("Error en loadNodesMapAux: " + e.getMessage());
             throw new Exception();
@@ -398,20 +389,10 @@ public class VnfService {
 
 
     private Map<String, Link> loadLinkMapAux(Map<String, Link> linksMap) throws Exception {
-        Map<String, Link> linksMapAux = new HashMap<>();
         try {
-            for (Link link : linksMap.values()) {
-                Link linkAux = new Link();
-                linkAux.setId(link.getId());
-                linkAux.setDelay(link.getDelay());
-                linkAux.setDistance(link.getDistance());
-                linkAux.setBandwidth(link.getBandwidth());
-                linkAux.setBandwidthUsed(link.getBandwidthUsed());
-                linkAux.setBandwidthCost(link.getBandwidthCost());
-                linkAux.setTrafficAmount(link.getTrafficAmount());
-                linksMapAux.put(linkAux.getId(), linkAux);
-            }
-            return linksMapAux;
+            return linksMap.entrySet().stream()
+                    .collect(Collectors.toMap(Map.Entry::getKey, e -> new Link(e.getValue())));
+
         } catch (Exception e) {
             logger.error("Error en loadLinkMapAux: " + e.getMessage());
             throw new Exception();
@@ -421,22 +402,12 @@ public class VnfService {
     private void updateGraphMap(Map<String, Node> nodesMapAux, Map<String, Link> linksMapAux)
             throws Exception {
         try {
-            nodesMap = new HashMap<>();
-            linksMap = new HashMap<>();
-
-            nodesMap.putAll(nodesMapAux);
-            linksMap.putAll(linksMapAux);
+            nodesMap = new HashMap<>(nodesMapAux);
+            linksMap = new HashMap<>(linksMapAux);
         } catch (Exception e) {
             logger.error("Error en updateGraphMap: " + e.getMessage());
             throw new Exception();
         }
-    }
-
-    private Path resultPath(String pathId, ShortestPath shortestPath){
-        Path path = new Path();
-        path.setId(pathId);
-        path.setShortestPath(shortestPath);
-        return path;
     }
 }
 
