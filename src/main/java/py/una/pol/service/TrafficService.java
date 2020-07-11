@@ -1,13 +1,9 @@
 package py.una.pol.service;
-
 import org.apache.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import py.una.pol.dto.NFVdto.Node;
-import py.una.pol.dto.NFVdto.SFC;
-import py.una.pol.dto.NFVdto.Traffic;
-import py.una.pol.dto.NFVdto.Vnf;
+import py.una.pol.dto.NFVdto.*;
 import py.una.pol.util.Configurations;
+import py.una.pol.util.Constants;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,8 +14,11 @@ import java.util.Random;
 public class TrafficService {
     Logger logger = Logger.getLogger(TrafficService.class);
 
-    @Autowired
-    private Configurations conf;
+    private final Configurations conf;
+
+    public TrafficService(Configurations conf) {
+        this.conf = conf;
+    }
 
     public List<Traffic> generateRandomtraffic(Map<String, Node> nodesMap, List<Vnf> vnfs) throws Exception {
         List<Traffic> traffics = new ArrayList<>();
@@ -55,9 +54,11 @@ public class TrafficService {
                 sfcSize = rn.nextInt(conf.getTrafficSfcMax() - conf.getTrafficSfcMin())
                         + conf.getTrafficSfcMin();
 
+                Vnf vnf;
                 SFC sfc = new SFC();
                 for (int k = 0; k < sfcSize; k++) {
-                    sfc.getVnfs().add(vnfs.get(rn.nextInt(vnfs.size())));
+                    vnf = new Vnf(vnfs.get(rn.nextInt(vnfs.size())));
+                    sfc.getVnfs().add(vnf);
                 }
                 traffic.setSfc(sfc);
                 traffics.add(traffic);

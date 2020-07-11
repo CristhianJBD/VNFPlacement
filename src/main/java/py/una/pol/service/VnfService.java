@@ -22,16 +22,20 @@ public class VnfService {
     @Autowired
     private DataService data;
     @Autowired
-    private Configurations conf;
-    @Autowired
     private TrafficService trafficService;
     @Autowired
     private ObjectiveFunctionService ofs;
 
+    private final Configurations conf;
     private Map<String, List<ShortestPath>> shortestPathMap;
     private DirectedGraph<String, KPath> graphMultiStage;
     private Map<String, Node> nodesMap;
     private Map<String, Link> linksMap;
+    private Map<String, VnfShared> vnfSharedMap;
+
+    public VnfService(Configurations conf) {
+        this.conf = conf;
+    }
 
     public boolean placement() {
         ResultPath resultPath;
@@ -39,9 +43,10 @@ public class VnfService {
         try {
             data.loadData();
             shortestPathMap = data.shortestPathMap;
+            vnfSharedMap = data.vnfsShared;
 
             traffics = trafficService.generateRandomtraffic(data.nodesMap, data.vnfs);
-            for(int i = 0; i < conf.getNumberSolutions(); i++) {
+            for (int i = 0; i < conf.getNumberSolutions(); i++) {
                 nodesMap = loadNodesMapAux(data.nodesMap);
                 linksMap = loadLinkMapAux(data.linksMap);
                 int count = 1;
@@ -68,7 +73,7 @@ public class VnfService {
                     }
                     count++;
                 }
-                ofs.solutionFOs(nodesMap,linksMap, traffics);
+                ofs.solutionFOs(nodesMap, linksMap, traffics, data.vnfsShared);
             }
             logger.info(ofs.solutions);
         } catch (Exception e) {
@@ -98,7 +103,7 @@ public class VnfService {
             vnf = traffic.getSfc().getVnfs().get(0);
             for (Node node : nodesMap.values()) {
                 if (node.getServer() != null) {
-                    kShortestPath = shortestPathMap.get(traffic.getNodeOriginId()+ "-" + node.getId());
+                    kShortestPath = shortestPathMap.get(traffic.getNodeOriginId() + "-" + node.getId());
 
                     //Se guardan los nodos con servidor
                     states.add(node);
@@ -144,8 +149,7 @@ public class VnfService {
                                 path = new KPath(kShortestPath, nMSOriginId + "-" + nMSDestinyId);
                                 gMStage.addVertex(nMSDestinyId);
                                 gMStage.addEdge(nMSOriginId, nMSDestinyId, path);
-                            }
-                            else if (nodeOrigin.equals(nodeDestiny)) {
+                            } else if (nodeOrigin.equals(nodeDestiny)) {
                                 kShortestPath = new ArrayList<>();
                                 ShortestPath shortestPath = new ShortestPath();
                                 shortestPath.getNodes().add(nodeDestiny.getId());
@@ -161,7 +165,7 @@ public class VnfService {
             //Crear enlaces entre la ultima etapa y el destino
             for (Node node : states) {
                 nMSOriginId = changeId(node.getId(), numberStages);
-                if(gMStage.containsVertex(nMSOriginId)) {
+                if (gMStage.containsVertex(nMSOriginId)) {
                     kShortestPath = shortestPathMap.get(node.getId() + "-" + traffic.getNodeDestinyId());
                     if (kShortestPath != null && kShortestPath.size() > 0) {
                         path = new KPath(kShortestPath, nMSOriginId + "-" + traffic.getNodeDestinyId());
@@ -231,7 +235,7 @@ public class VnfService {
                         if (!isResourceAvailableLink(originNodeId, randomNodeId,
                                 bandwidtCurrent, linksMapAux, nodesMapAux, shortestPath)) {
                             break;
-                        }else {
+                        } else {
                             validPlacement = true;
                             pathNodeIds.add(new Path(kPath.getId(), shortestPath));
                         }
@@ -241,7 +245,7 @@ public class VnfService {
                                 vnf, nodesMapAux, linksMapAux, shortestPath, serverVnf))
                             break;
                         else {
-                            bandwidtCurrent = vnf.getBandwidthFactor() * bandwidtCurrent;
+                            bandwidtCurrent = vnfSharedMap.get(vnf.getId()).getBandwidthFactor() * bandwidtCurrent;
                             pathNodeIds.add(new Path(kPath.getId(), shortestPath));
                             originNodeId = randomNodeId;
                             indexVnf = indexVnf + 1;
@@ -267,32 +271,44 @@ public class VnfService {
                                              Map<String, Link> linksMapAux, ShortestPath shortestPath,
                                              List<String> serverVnf) throws Exception {
         int cpuToUse, ramToUse, storageToUse, energyToUse;
+        VnfShared vnfToInstall, vnfShared;
         double bandwidtUsed;
         Link link;
         try {
             String nodeId = shortestPath.getNodes().get(shortestPath.getNodes().size() - 1);
-
             Node node = nodesMapAux.get(nodeId);
             Server server = node.getServer();
             if (server != null) {
-                //Se calculan los recursos que seran utilizados
-                cpuToUse = server.getResourceCPUUsed() + vnf.getResourceCPU();
-                ramToUse = server.getResourceRAMUsed() + vnf.getResourceRAM();
-                storageToUse = server.getResourceStorageUsed() + vnf.getResourceStorage();
-                energyToUse = server.getEnergyUsed() + vnf.getResourceCPU() * server.getEnergyPerCoreWatts();
+                //se verifica si el vnf ya esta instalado para poder reutilizar
+                vnfShared = server.getVnfs().get(vnf.getId());
+                if (vnfShared == null) {
+                    //Vnf a instalar en el servidor
+                    vnfToInstall = new VnfShared(vnfSharedMap.get(vnf.getId()));
+                    cpuToUse = server.getResourceCPUUsed() + vnfToInstall.getResourceCPU();
+                    ramToUse = server.getResourceRAMUsed() + vnfToInstall.getResourceRAM();
+                    storageToUse = server.getResourceStorageUsed() + vnfToInstall.getResourceStorage();
+                    energyToUse = server.getEnergyUsed() + vnfToInstall.getResourceCPU() * server.getEnergyPerCoreWatts();
 
-                if (cpuToUse > server.getResourceCPU() || ramToUse > server.getResourceRAM() ||
-                        storageToUse > server.getResourceStorage() || energyToUse > server.getEnergyPeakWatts())
-                    return false;
-                else{
-                    //setear los recursos utilizados
-                    server.setResourceCPUUsed(cpuToUse);
-                    server.setResourceRAMUsed(ramToUse);
-                    server.setResourceStorageUsed(storageToUse);
-                    server.setEnergyUsed(energyToUse);
-                    server.getVnf().add(vnf);
-                    serverVnf.add(node.getId());
+                    if(cpuToUse <= server.getResourceCPU() && ramToUse <= server.getResourceRAM() &&
+                            storageToUse <= server.getResourceStorage() && energyToUse <= server.getEnergyPeakWatts()) {
+                        server.setResourceCPUUsed(cpuToUse);
+                        server.setResourceRAMUsed(ramToUse);
+                        server.setResourceStorageUsed(storageToUse);
+                        server.setEnergyUsed(energyToUse);
+                        server.getVnfs().put(vnf.getId(), vnfToInstall);
+                    }else
+                        return false;
+                    vnfShared = vnfToInstall;
                 }
+                cpuToUse = vnfShared.getResourceCPUUsed() + vnf.getResourceCPU();
+                ramToUse = vnfShared.getResourceRAMUsed() + vnf.getResourceRAM();
+                if (cpuToUse <= vnfShared.getResourceCPU() && ramToUse <= vnfShared.getResourceRAM()){
+                    vnfShared.setResourceRAMUsed(ramToUse);
+                    vnfShared.setResourceCPUUsed(cpuToUse);
+                    vnfShared.getVnfs().add(vnf);
+                    serverVnf.add(node.getId());
+                }else
+                    return false;
             } else
                 return false;
 
@@ -307,7 +323,7 @@ public class VnfService {
                         link.setTrafficAmount(link.getTrafficAmount() + 1);
                     }
                 }
-                if(shortestPath.getLinks().size() != 0) {
+                if (shortestPath.getLinks().size() != 0) {
                     for (int i = 0; i < shortestPath.getNodes().size() - 1; i++) {
                         node = nodesMapAux.get(shortestPath.getNodes().get(i));
                         node.setTrafficAmount(node.getTrafficAmount() + 1);
@@ -323,7 +339,7 @@ public class VnfService {
 
     private boolean isResourceAvailableLink(String nodeOriginId, String nodeDestinyId, double bandwidtCurrent,
                                             Map<String, Link> linksMapAux, Map<String, Node> nodesMapAux, ShortestPath shortestPath) throws Exception {
-        Link link; Node node;
+        Link link;Node node;
         double bandwidtUsed;
         try {
             if (!nodeDestinyId.equals(nodeOriginId)) {
@@ -337,7 +353,7 @@ public class VnfService {
                         link.setTrafficAmount(link.getTrafficAmount() + 1);
                     }
                 }
-                if(shortestPath.getLinks().size() != 0) {
+                if (shortestPath.getLinks().size() != 0) {
                     for (String id : shortestPath.getNodes()) {
                         node = nodesMapAux.get(id);
                         node.setTrafficAmount(node.getTrafficAmount() + 1);
@@ -354,23 +370,31 @@ public class VnfService {
 
     private boolean isResourceAvailableServer(Server server, Vnf vnf) throws Exception {
         int cpuToUse, ramToUse, storageToUse, energyToUse;
+        VnfShared vnfToInstall, vnfShared;
         try {
-            cpuToUse = server.getResourceCPUUsed() + vnf.getResourceCPU();
-            ramToUse = server.getResourceRAMUsed() + vnf.getResourceRAM();
-            storageToUse = server.getResourceStorageUsed() + vnf.getResourceStorage();
-            energyToUse = server.getEnergyUsed() + vnf.getResourceCPU() * server.getEnergyPerCoreWatts();
+            vnfShared = server.getVnfs().get(vnf.getId());
+            if (vnfShared != null) {
+                cpuToUse = vnfShared.getResourceCPUUsed() + vnf.getResourceCPU();
+                ramToUse = vnfShared.getResourceRAMUsed() + vnf.getResourceRAM();
 
-            if (cpuToUse > server.getResourceCPU() || ramToUse > server.getResourceRAM() ||
-                    storageToUse > server.getResourceStorage() || energyToUse > server.getEnergyPeakWatts())
-                return false;
-            else
-                return true;
+                if (cpuToUse <= vnfShared.getResourceCPU() && ramToUse <= vnfShared.getResourceRAM())
+                    return true;
+            }
+
+            vnfToInstall = vnfSharedMap.get(vnf.getId());
+            cpuToUse = server.getResourceCPUUsed() + vnfToInstall.getResourceCPU();
+            ramToUse = server.getResourceRAMUsed() + vnfToInstall.getResourceRAM();
+            storageToUse = server.getResourceStorageUsed() + vnfToInstall.getResourceStorage();
+            energyToUse = server.getEnergyUsed() + vnfToInstall.getResourceCPU() * server.getEnergyPerCoreWatts();
+
+            return cpuToUse <= server.getResourceCPU() && ramToUse <= server.getResourceRAM() &&
+                    storageToUse <= server.getResourceStorage() && energyToUse <= server.getEnergyPeakWatts();
+
         } catch (Exception e) {
             logger.error("Error en IsResourceAvailableServer: " + e.getMessage());
             throw new Exception();
         }
     }
-
 
     private String changeId(String originalNodeId, int stage) {
         return "s" + stage + originalNodeId;
@@ -386,7 +410,6 @@ public class VnfService {
             throw new Exception();
         }
     }
-
 
     private Map<String, Link> loadLinkMapAux(Map<String, Link> linksMap) throws Exception {
         try {

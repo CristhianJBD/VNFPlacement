@@ -5,7 +5,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import py.una.pol.dto.NFVdto.*;
 import py.una.pol.dto.Path;
-import py.una.pol.dto.ResultPath;
 import py.una.pol.dto.Solutions;
 import py.una.pol.util.Configurations;
 
@@ -21,13 +20,16 @@ import java.util.stream.Collectors;
 public class ObjectiveFunctionService {
     Logger logger = Logger.getLogger(ObjectiveFunctionService.class);
 
-    @Autowired
-    private Configurations configuration;
+    private final Configurations configuration;
 
     Solutions solutions = new Solutions();
 
-    public Solutions solutionFOs(Map<String, Node> nodesMap, Map<String, Link> linksMap,
-                                 List<Traffic> traffics) throws Exception {
+    public ObjectiveFunctionService(Configurations configuration) {
+        this.configuration = configuration;
+    }
+
+    public void solutionFOs(Map<String, Node> nodesMap, Map<String, Link> linksMap,
+                                 List<Traffic> traffics, Map<String, VnfShared> vnfsShared) throws Exception {
 
         DecimalFormat decimalFormat = new DecimalFormat("#.###");
         decimalFormat.setRoundingMode(RoundingMode.CEILING);
@@ -37,7 +39,7 @@ public class ObjectiveFunctionService {
         List<Link> links = new ArrayList<>(linksMap.values());
 
         for(Node node : nodes)
-            if(node.getServer()!=null && node.getServer().getVnf().size() > 0)
+            if(node.getServer()!=null && node.getServer().getVnfs().size() > 0)
                 servers.add(node.getServer());
 
         solutions.getEnergyCostList().add(decimalFormat.format(
@@ -45,7 +47,7 @@ public class ObjectiveFunctionService {
         solutions.getForwardingTrafficCostList().add(decimalFormat.format(
                 calculateForwardingTrafficCost(nodes, links)));
         solutions.getSloCostList().add(decimalFormat.format(
-                calculateSLOCost(linksMap, traffics)));
+                calculateSLOCost(linksMap, traffics, vnfsShared)));
         solutions.getHostSizeList().add(calculateHostSize(servers));
         solutions.getDelayCostList().add(calculateDelayTotal(servers, links));
         solutions.getDeployCostList().add(calculateDeployCost(servers));
@@ -60,8 +62,6 @@ public class ObjectiveFunctionService {
         solutions.getAllLinksCostList().add(decimalFormat.format(calculateAllLinkCost(links)));
         solutions.getMaxUseLinkList().add(decimalFormat.format(calculateMaximunUseLink(links)));
         solutions.getThroughputList().add(decimalFormat.format(calculateThroughput(traffics)));
-
-        return solutions;
     }
 
     /*
@@ -122,10 +122,10 @@ public class ObjectiveFunctionService {
     public int calculateDelayTotal(List<Server> servers, List<Link> links) throws Exception {
         int latency = 0;
         try {
-            //Suma del delay de procesamiento de cada VNF instalado
+            //Suma del delay de procesamiento de cada VNF instalado y compartido
             for (Server server : servers)
-                for(Vnf vnf : server.getVnf())
-                    latency = latency + vnf.getDelay();
+                for(VnfShared vnf : server.getVnfs().values())
+                    latency = latency + vnf.getDelay() * vnf.getVnfs().size();
 
             //Suma del delay de cada enlace de la ruta
             for (Link link : links)
@@ -143,7 +143,7 @@ public class ObjectiveFunctionService {
         try {
             //Suma del costo de deployar los VNFs en los servidores
             for (Server server : servers)
-                for(Vnf vnf : server.getVnf())
+                for(VnfShared vnf : server.getVnfs().values())
                     deployCost = deployCost + vnf.getDeploy() + server.getDeploy();
 
             return deployCost;
@@ -187,7 +187,7 @@ public class ObjectiveFunctionService {
             for (Server server : servers) {
                 //Suma del costo de licencia de cada servidor
                 licencesCost = server.getLicenceCost();
-                for (Vnf vnf : server.getVnf())
+                for (VnfShared vnf : server.getVnfs().values())
                     //Suma del costo de licencia de cada VNF
                     licencesCost = licencesCost + vnf.getLicenceCost();
             }
@@ -199,7 +199,8 @@ public class ObjectiveFunctionService {
         }
     }
 // Analizar mejor
-    public double calculateSLOCost(Map<String, Link> linksMap, List<Traffic> traffics) throws Exception {
+    public double calculateSLOCost(Map<String, Link> linksMap, List<Traffic> traffics,
+                                   Map<String, VnfShared> vnfsShared) throws Exception {
         double sloCost = 0;
         int delayTotal;
         try {
@@ -212,8 +213,9 @@ public class ObjectiveFunctionService {
                         for (String linkId : path.getShortestPath().getLinks())
                             delayTotal = delayTotal + linksMap.get(linkId).getDelay();
 
-                    for (Vnf vnf : traffic.getSfc().getVnfs())
-                        delayTotal = delayTotal + vnf.getDelay();
+                    for (Vnf vnf : traffic.getSfc().getVnfs()) {
+                        delayTotal = delayTotal + vnfsShared.get(vnf.getId()).getDelay();
+                    }
 
                     if (traffic.getDelayMaxSLA() < delayTotal)
                         sloCost = sloCost + traffic.getPenaltyCostSLO();
@@ -340,7 +342,7 @@ public class ObjectiveFunctionService {
         int instances = 0;
         try {
             for (Server server : servers){
-                instances =instances + server.getVnf().size();
+                instances = instances + server.getVnfs().size();
             }
             return instances;
         } catch (Exception e) {

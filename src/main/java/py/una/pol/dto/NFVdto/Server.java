@@ -3,7 +3,9 @@ package py.una.pol.dto.NFVdto;
 import lombok.Data;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Data
 public class Server {
@@ -12,7 +14,7 @@ public class Server {
     private String id;
 
     //Vnf que es instalado en el Servidor
-    private List<Vnf> vnf = new ArrayList<>();
+    private Map<String, VnfShared> vnfs = new HashMap<>();
 
     //Costo de Deployar o Instalar el VNF
     private int deploy;
@@ -80,27 +82,19 @@ public class Server {
         this.resourceCPUUsed = server.getResourceCPUUsed();
         this.energyUsed = server.getEnergyUsed();
 
-        List<Vnf> vnfs = new ArrayList<>();
-        for(Vnf vnf : server.getVnf()){
-            Vnf vnfToCopy = new Vnf();
-            vnfToCopy.setId(vnf.getId());
-            vnfToCopy.setDelay(vnf.getDelay());
-            vnfToCopy.setDeploy(vnf.getDeploy());
-            vnfToCopy.setBandwidthFactor(vnf.getBandwidthFactor());
-            vnfToCopy.setLicenceCost(vnf.getLicenceCost());
-            vnfToCopy.setResourceCPU(vnf.getResourceCPU());
-            vnfToCopy.setResourceRAM(vnf.getResourceRAM());
-            vnfToCopy.setResourceStorage(vnf.getResourceStorage());
-            vnfs.add(vnfToCopy);
+        Map<String, VnfShared> vnfs = new HashMap<>();
+        for(VnfShared vnfShared : server.getVnfs().values()){
+            VnfShared vnfSharedToCopy = new VnfShared(vnfShared);
+            vnfs.put(vnfSharedToCopy.getId(),vnfSharedToCopy);
         }
-        this.vnf = vnfs;
+        this.vnfs = vnfs;
     }
 
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder("Server{");
         sb.append("id='").append(id).append('\'');
-        sb.append(", vnf=").append(vnf);
+        sb.append(", vnf=").append(vnfs);
         sb.append(", licenceCost=").append(licenceCost);
         sb.append(", deploy=").append(deploy);
         sb.append(", energyCost=").append(energyCost);

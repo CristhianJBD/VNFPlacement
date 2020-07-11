@@ -5,7 +5,6 @@ import org.jgrapht.Graph;
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.shortestpath.KShortestPaths;
 import org.jgrapht.graph.SimpleGraph;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import py.una.pol.dto.ShortestPath;
 import py.una.pol.dto.NFVdto.*;
@@ -20,26 +19,31 @@ import java.util.*;
 public class DataService {
     Logger logger = Logger.getLogger(DataService.class);
 
-    @Autowired
-    private Configurations conf;
+    private final Configurations conf;
 
     private int[][] delay;
     private int[][] distance;
     private double[][] bandwidthCost;
     private double[][] bandwidth;
     private String[][] matrixNodes;
-    private Graph<Node, Link> graph = new SimpleGraph<>(Link.class);
+    private final Graph<Node, Link> graph = new SimpleGraph<>(Link.class);
     public Map<String, List<ShortestPath>> shortestPathMap = new HashMap<>();
     public List<Node> nodes = new ArrayList<>();
     public List<Link> links = new ArrayList<>();
     public Map<String, Node> nodesMap = new HashMap<>();
     public Map<String, Link> linksMap = new HashMap<>();
+    public Map<String, VnfShared> vnfsShared = new HashMap<>();
     public List<Vnf> vnfs = new ArrayList<>();
     public List<Server> servers = new ArrayList<>();
+
+    public DataService(Configurations conf) {
+        this.conf = conf;
+    }
 
     public void loadData() {
         try {
             logger.info("Valores iniciales: ");
+            loadVnfsShared();
             loadVnfs();
             loadServers();
             loadNodes();
@@ -53,30 +57,58 @@ public class DataService {
     }
 
 
+    private void loadVnfsShared() throws Exception {
+        VnfShared vnfShared;
+        String separator = Constants.separatorData;
+        logger.info("VNFs: ");
+        try {
+            String[] ids = conf.getVnfSharedId().split(separator);
+            String[] delays = conf.getVnfSharedDelay().split(separator);
+            String[] deploys = conf.getVnfSharedDeploy().split(separator);
+            String[] cpus = conf.getVnfSharedResourceCPU().split(separator);
+            String[] rams = conf.getVnfSharedResourceRAM().split(separator);
+            String[] storages = conf.getVnfSharedResourceStorage().split(separator);
+            String[] licences = conf.getVnfSharedLicenceCost().split(separator);
+            String[] bandwidthFactor = conf.getVnfSharedBandwidthFactor().split(separator);
+
+            for (int i = 0; i < conf.getVnfSharedSize(); i++) {
+                vnfShared = new VnfShared();
+                vnfShared.setId(ids[i]);
+                vnfShared.setDelay(Integer.parseInt(delays[i]));
+                vnfShared.setDeploy(Integer.parseInt(deploys[i]));
+                vnfShared.setResourceCPU(Integer.parseInt(cpus[i]));
+                vnfShared.setResourceRAM(Integer.parseInt(rams[i]));
+                vnfShared.setResourceStorage(Integer.parseInt(storages[i]));
+                vnfShared.setLicenceCost(Integer.parseInt(licences[i]));
+                vnfShared.setBandwidthFactor(Double.parseDouble(bandwidthFactor[i]));
+
+                logger.info(vnfShared.toString());
+                vnfsShared.put(vnfShared.getId(), vnfShared);
+            }
+
+        } catch (NumberFormatException e) {
+            logger.error("Error al parsear los datos de los VNFs: " + e.getMessage());
+            throw new Exception();
+        } catch (Exception e) {
+            logger.error("Error al cargar los datos de los VNFs:" + e.getMessage());
+            throw new Exception();
+        }
+    }
+
     private void loadVnfs() throws Exception {
         Vnf vnf;
-        String separator = conf.getSeparator();
+        String separator = Constants.separatorData;
         logger.info("VNFs: ");
         try {
             String[] ids = conf.getVnfId().split(separator);
-            String[] delays = conf.getVnfDelay().split(separator);
-            String[] deploys = conf.getVnfDeploy().split(separator);
             String[] cpus = conf.getVnfResourceCPU().split(separator);
             String[] rams = conf.getVnfResourceRAM().split(separator);
-            String[] storages = conf.getVnfResourceStorage().split(separator);
-            String[] licences = conf.getVnfLicenceCost().split(separator);
-            String[] bandwidthFactor = conf.getVnfBandwidthFactor().split(separator);
 
             for (int i = 0; i < conf.getVnfSize(); i++) {
                 vnf = new Vnf();
                 vnf.setId(ids[i]);
-                vnf.setDelay(Integer.parseInt(delays[i]));
-                vnf.setDeploy(Integer.parseInt(deploys[i]));
                 vnf.setResourceCPU(Integer.parseInt(cpus[i]));
                 vnf.setResourceRAM(Integer.parseInt(rams[i]));
-                vnf.setResourceStorage(Integer.parseInt(storages[i]));
-                vnf.setLicenceCost(Integer.parseInt(licences[i]));
-                vnf.setBandwidthFactor(Double.parseDouble(bandwidthFactor[i]));
 
                 logger.info(vnf.toString());
                 vnfs.add(vnf);
@@ -94,7 +126,7 @@ public class DataService {
 
     private void loadServers() throws Exception {
         Server server;
-        String separator = conf.getSeparator();
+        String separator = Constants.separatorData;
         logger.info("Servidores: ");
         try {
             String[] ids = conf.getServerId().split(separator);
@@ -141,7 +173,7 @@ public class DataService {
 
     private void loadNodes() throws Exception {
         Node node;
-        String separator = conf.getSeparator();
+        String separator = Constants.separatorData;
         logger.info("Nodos: ");
         try {
             String[] ids = conf.getNodeId().split(separator);
@@ -196,9 +228,7 @@ public class DataService {
             for (int i = 0; i < size; i++) {
                 String[] line = reader.readLine().split(" ");
 
-                for (int j = 0; j < size; j++) {
-                    matrixNodes[i][j] = line[j];
-                }
+                System.arraycopy(line, 0, matrixNodes[i], 0, size);
             }
             logger.info(Arrays.deepToString(matrixNodes));
 
