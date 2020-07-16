@@ -4,8 +4,11 @@ package py.una.pol.dto.NFVdto;
 import lombok.Data;
 import py.una.pol.util.Constants;
 
+import java.io.Serializable;
+
 @Data
-public class Vnf {
+public class Vnf implements Serializable {
+        private static final long serialVersionUID = -4346254958072354423L;
     //Identificador del VNF
     private String id;
 

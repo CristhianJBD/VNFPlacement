@@ -3,8 +3,11 @@ package py.una.pol.dto.NFVdto;
 import lombok.Data;
 import py.una.pol.dto.ResultPath;
 
+import java.io.Serializable;
+
 @Data
-public class Traffic {
+public class Traffic implements Serializable {
+    private static final long serialVersionUID = 948617996701541930L;
 
     //Nodo origen
     private String nodeOriginId;

@@ -218,7 +218,7 @@ public class DataService {
         logger.info("Matrices: ");
         try {
             BufferedReader reader;
-            reader = new BufferedReader(new FileReader(System.getProperty("app.home") + conf.getMatrixName()));
+            reader = new BufferedReader(new FileReader(System.getProperty("app.home") + conf.getMatrixFileName()));
 
             int size = Integer.parseInt(reader.readLine());
             logger.info("Cantidad de nodos: " + size);

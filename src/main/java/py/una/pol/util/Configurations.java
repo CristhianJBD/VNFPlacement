@@ -24,8 +24,10 @@ public class Configurations {
     public List<Node> nodes = new ArrayList<>();
 
     //Parametros de Sistema
-    @Value("${matrix.name}")
-    private String matrixName;
+    @Value("${matrix.file.name}")
+    private String matrixFileName;
+    @Value("${traffics.file.name}")
+    private String trafficsFileName;
     @Value("${number.solution}")
     private Integer numberSolutions;
     @Value("${number.traffic}")
@@ -34,6 +36,8 @@ public class Configurations {
     private Integer k;
     @Value("${retries.solution}")
     private Integer retriesSolution;
+    @Value("${read.traffic.file}")
+    private boolean readTrafficFile;
 
     //VNF Shared
     @Value("${vnf.shared.size}")
