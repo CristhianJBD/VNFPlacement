@@ -175,7 +175,7 @@ public class ObjectiveFunctionService {
     public int calculateHops(List<Link> links) throws Exception {
         int hops = 0;
         try {
-            // suma de las distancias de los enlaces
+            // suma de los saltos
             for (Link link : links)
                 hops = hops + link.getTrafficAmount();
 
@@ -267,9 +267,9 @@ public class ObjectiveFunctionService {
         try {
             //Suma de los recursos utilizados de cada servidor
             for (Server server : servers) {
-                    resourceCPUCost = resourceCPUCost + server.getResourceCPUUsed();
-                    resourceRAMCost = resourceRAMCost + server.getResourceRAMUsed();
-                    resourceStorageCost = resourceStorageCost + server.getResourceStorageUsed();
+                    resourceCPUCost = resourceCPUCost + (server.getResourceCPUUsed() * server.getResourceCPUCost());
+                    resourceRAMCost = resourceRAMCost + (server.getResourceRAMUsed() * server.getResourceRAMCost());
+                    resourceStorageCost = resourceStorageCost + (server.getResourceStorageUsed() * server.getResourceStorageCost());
                 }
 
             resourceTotalCost = resourceCPUCost + resourceRAMCost + resourceStorageCost;
