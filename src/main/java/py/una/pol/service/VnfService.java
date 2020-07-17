@@ -220,7 +220,6 @@ public class VnfService {
 
                 retries = retries + 1;
                 indexVnf = 0;
-
                 while (!validPlacement) {  //Hasta completar una ruta random
                     //De forma randomica se obtiene un nodo del grafo multi estados
                     Set<KPath> links = graphMultiStage.outgoingEdgesOf(originNodeId);
@@ -270,8 +269,9 @@ public class VnfService {
                                              double bandwidtCurrent, Vnf vnf, Map<String, Node> nodesMapAux,
                                              Map<String, Link> linksMapAux, ShortestPath shortestPath,
                                              List<String> serverVnf) throws Exception {
-        int cpuToUse, ramToUse, storageToUse, energyToUse;
-        VnfShared vnfToInstall, vnfShared;
+        int cpuToUse, ramToUse;
+        VnfShared vnfToInstall;
+        List<VnfShared> vnfsShared;
         double bandwidtUsed;
         Link link;
         try {
@@ -280,35 +280,40 @@ public class VnfService {
             Server server = node.getServer();
             if (server != null) {
                 //se verifica si el vnf ya esta instalado para poder reutilizar
-                vnfShared = server.getVnfs().get(vnf.getId());
-                if (vnfShared == null) {
-                    //Vnf a instalar en el servidor
-                    vnfToInstall = new VnfShared(vnfSharedMap.get(vnf.getId()));
-                    cpuToUse = server.getResourceCPUUsed() + vnfToInstall.getResourceCPU();
-                    ramToUse = server.getResourceRAMUsed() + vnfToInstall.getResourceRAM();
-                    storageToUse = server.getResourceStorageUsed() + vnfToInstall.getResourceStorage();
-                    energyToUse = server.getEnergyUsed() + vnfToInstall.getResourceCPU() * server.getEnergyPerCoreWatts();
-
-                    if(cpuToUse <= server.getResourceCPU() && ramToUse <= server.getResourceRAM() &&
-                            storageToUse <= server.getResourceStorage() && energyToUse <= server.getEnergyPeakWatts()) {
-                        server.setResourceCPUUsed(cpuToUse);
-                        server.setResourceRAMUsed(ramToUse);
-                        server.setResourceStorageUsed(storageToUse);
-                        server.setEnergyUsed(energyToUse);
-                        server.getVnfs().put(vnf.getId(), vnfToInstall);
-                    }else
+                vnfsShared = server.getVnfs().get(vnf.getId());
+                if (vnfsShared == null) {
+                    //Vnf a instalar en el servidor por primera vez
+                    vnfToInstall = installVNF(server, vnf);
+                    if (vnfToInstall != null) {
+                        vnfsShared = new ArrayList<>();
+                        vnfsShared.add(vnfToInstall);
+                        server.getVnfs().put(vnf.getId(), vnfsShared);
+                        serverVnf.add(node.getId());
+                    } else
                         return false;
-                    vnfShared = vnfToInstall;
+                } else {
+                    //Buscar VNF compartido para reutilizar
+                    for (VnfShared vnfShared : vnfsShared) {
+                        cpuToUse = vnfShared.getResourceCPUUsed() + vnf.getResourceCPU();
+                        ramToUse = vnfShared.getResourceRAMUsed() + vnf.getResourceRAM();
+                        if (cpuToUse <= vnfShared.getResourceCPU() && ramToUse <= vnfShared.getResourceRAM()) {
+                            vnfShared.setResourceRAMUsed(ramToUse);
+                            vnfShared.setResourceCPUUsed(cpuToUse);
+                            vnfShared.getVnfs().add(vnf);
+                            serverVnf.add(node.getId());
+                            return true;
+                        }
+                    }
+
+                    //Instalar un nuevo VNF porque no existe espacio
+                    vnfToInstall = installVNF(server, vnf);
+                    if (vnfToInstall != null) {
+                        vnfsShared.add(vnfToInstall);
+                        server.getVnfs().put(vnf.getId(), vnfsShared);
+                        serverVnf.add(node.getId());
+                    } else
+                        return false;
                 }
-                cpuToUse = vnfShared.getResourceCPUUsed() + vnf.getResourceCPU();
-                ramToUse = vnfShared.getResourceRAMUsed() + vnf.getResourceRAM();
-                if (cpuToUse <= vnfShared.getResourceCPU() && ramToUse <= vnfShared.getResourceRAM()){
-                    vnfShared.setResourceRAMUsed(ramToUse);
-                    vnfShared.setResourceCPUUsed(cpuToUse);
-                    vnfShared.getVnfs().add(vnf);
-                    serverVnf.add(node.getId());
-                }else
-                    return false;
             } else
                 return false;
 
@@ -337,9 +342,43 @@ public class VnfService {
         }
     }
 
+    private VnfShared installVNF(Server server, Vnf vnf) throws Exception {
+        int cpuToUse, ramToUse, storageToUse;
+        VnfShared vnfToInstall;
+        try {
+            //Vnf a instalar en el servidor
+            vnfToInstall = new VnfShared(vnfSharedMap.get(vnf.getId()));
+            cpuToUse = server.getResourceCPUUsed() + vnfToInstall.getResourceCPU();
+            ramToUse = server.getResourceRAMUsed() + vnfToInstall.getResourceRAM();
+            storageToUse = server.getResourceStorageUsed() + vnfToInstall.getResourceStorage();
+
+            if (cpuToUse <= server.getResourceCPU() && ramToUse <= server.getResourceRAM() &&
+                    storageToUse <= server.getResourceStorage()) {
+                server.setResourceCPUUsed(cpuToUse);
+                server.setResourceRAMUsed(ramToUse);
+                server.setResourceStorageUsed(storageToUse);
+            } else
+                return null;
+
+            cpuToUse = vnfToInstall.getResourceCPUUsed() + vnf.getResourceCPU();
+            ramToUse = vnfToInstall.getResourceRAMUsed() + vnf.getResourceRAM();
+            if (cpuToUse <= vnfToInstall.getResourceCPU() && ramToUse <= vnfToInstall.getResourceRAM()) {
+                vnfToInstall.setResourceRAMUsed(ramToUse);
+                vnfToInstall.setResourceCPUUsed(cpuToUse);
+                vnfToInstall.getVnfs().add(vnf);
+                return vnfToInstall;
+            } else
+                return null;
+        } catch (Exception e) {
+            logger.error("Error al instalar VNF: " + e.getMessage());
+            throw new Exception();
+        }
+    }
+
     private boolean isResourceAvailableLink(String nodeOriginId, String nodeDestinyId, double bandwidtCurrent,
                                             Map<String, Link> linksMapAux, Map<String, Node> nodesMapAux, ShortestPath shortestPath) throws Exception {
-        Link link;Node node;
+        Link link;
+        Node node;
         double bandwidtUsed;
         try {
             if (!nodeDestinyId.equals(nodeOriginId)) {
@@ -369,26 +408,28 @@ public class VnfService {
 
 
     private boolean isResourceAvailableServer(Server server, Vnf vnf) throws Exception {
-        int cpuToUse, ramToUse, storageToUse, energyToUse;
-        VnfShared vnfToInstall, vnfShared;
+        int cpuToUse, ramToUse, storageToUse;
+        VnfShared vnfToInstall;
+        List<VnfShared> vnfsShared;
         try {
-            vnfShared = server.getVnfs().get(vnf.getId());
-            if (vnfShared != null) {
-                cpuToUse = vnfShared.getResourceCPUUsed() + vnf.getResourceCPU();
-                ramToUse = vnfShared.getResourceRAMUsed() + vnf.getResourceRAM();
+            vnfsShared = server.getVnfs().get(vnf.getId());
+            if (vnfsShared != null) {
+                for (VnfShared vnfShared : vnfsShared) {
+                    cpuToUse = vnfShared.getResourceCPUUsed() + vnf.getResourceCPU();
+                    ramToUse = vnfShared.getResourceRAMUsed() + vnf.getResourceRAM();
 
-                if (cpuToUse <= vnfShared.getResourceCPU() && ramToUse <= vnfShared.getResourceRAM())
-                    return true;
+                    if (cpuToUse <= vnfShared.getResourceCPU() && ramToUse <= vnfShared.getResourceRAM())
+                        return true;
+                }
             }
 
             vnfToInstall = vnfSharedMap.get(vnf.getId());
             cpuToUse = server.getResourceCPUUsed() + vnfToInstall.getResourceCPU();
             ramToUse = server.getResourceRAMUsed() + vnfToInstall.getResourceRAM();
             storageToUse = server.getResourceStorageUsed() + vnfToInstall.getResourceStorage();
-            energyToUse = server.getEnergyUsed() + vnfToInstall.getResourceCPU() * server.getEnergyPerCoreWatts();
 
             return cpuToUse <= server.getResourceCPU() && ramToUse <= server.getResourceRAM() &&
-                    storageToUse <= server.getResourceStorage() && energyToUse <= server.getEnergyPeakWatts();
+                    storageToUse <= server.getResourceStorage();
 
         } catch (Exception e) {
             logger.error("Error en IsResourceAvailableServer: " + e.getMessage());

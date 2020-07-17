@@ -24,6 +24,13 @@ public class Vnf implements Serializable {
     public Vnf() {
     }
 
+    public Vnf(String id, String type, int resourceCPU, int resourceRAM) {
+        this.id = id;
+        this.type = type;
+        this.resourceCPU = resourceCPU;
+        this.resourceRAM = resourceRAM;
+    }
+
     public Vnf(Vnf vnf) {
         String[] split = vnf.getId().split(Constants.separatorVnf);
         this.id = split[0];

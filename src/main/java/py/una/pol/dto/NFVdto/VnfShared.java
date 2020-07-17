@@ -19,26 +19,26 @@ public class VnfShared {
     //Costo de Deployar o Instalar el VNF
     private int deploy;
 
-    //Requerimiento de CPU del VNF (Cantidad de Cores)
-    private int resourceCPU;
-
-    //Requerimiento de RAM del VNF (En GB)
-    private int resourceRAM;
-
-    //Requerimiento de almacenamiento del VNF (En GB)
-    private int resourceStorage;
-
     //Costo de licencia del VNF (En dolares)
     private double licenceCost;
 
     //Factor de modiicacion del VNF (En %)
     private double bandwidthFactor;
 
-    //RAM utilizada
-    private int resourceRAMUsed;
+    //Requerimiento de CPU del VNF (Cantidad de Cores)
+    private int resourceCPU;
 
     //CPU utilizado
     private int resourceCPUUsed;
+
+    //Requerimiento de RAM del VNF (En GB)
+    private int resourceRAM;
+
+    //RAM utilizada
+    private int resourceRAMUsed;
+
+    //Requerimiento de almacenamiento del VNF (En GB)
+    private int resourceStorage;
 
     public VnfShared(VnfShared vnfShared) {
         this.id = vnfShared.getId();
@@ -53,14 +53,11 @@ public class VnfShared {
         this.resourceCPUUsed = vnfShared.getResourceCPUUsed();
 
         List<Vnf> vnfs = new ArrayList<>();
-        for (Vnf vnf : vnfShared.getVnfs()) {
-            Vnf vnfToCopy = new Vnf();
-            vnfToCopy.setId(vnf.getId());
-            vnfToCopy.setType(vnf.getType());
-            vnfToCopy.setResourceRAM(vnf.getResourceRAM());
-            vnfToCopy.setResourceCPU(vnf.getResourceCPU());
-            vnfs.add(vnfToCopy);
-        }
+        vnfShared.getVnfs().forEach(vnf -> {
+            vnfs.add(new Vnf(vnf.getId(),vnf.getType(),
+                    vnf.getResourceCPU(), vnf.getResourceRAM()));
+        });
+
         this.vnfs = vnfs;
     }
 
@@ -73,12 +70,12 @@ public class VnfShared {
         sb.append("id='").append(id).append('\'');
         sb.append(", delay=").append(delay);
         sb.append(", deploy=").append(deploy);
-        sb.append(", resourceCPU=").append(resourceCPU);
-        sb.append(", resourceRAM=").append(resourceRAM);
-        sb.append(", resourceStorage=").append(resourceStorage);
         sb.append(", licenceCost=").append(licenceCost);
         sb.append(", bandwidthFactor=").append(bandwidthFactor);
+        sb.append(", resourceStorage=").append(resourceStorage);
+        sb.append(", resourceCPU=").append(resourceCPU);
         sb.append(", resourceCPUUsed=").append(resourceCPUUsed);
+        sb.append(", resourceRAM=").append(resourceRAM);
         sb.append(", resourceRAMUsed=").append(resourceRAMUsed);
         sb.append('}');
         return sb.toString();

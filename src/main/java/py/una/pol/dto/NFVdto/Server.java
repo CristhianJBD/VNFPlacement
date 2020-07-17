@@ -2,10 +2,8 @@ package py.una.pol.dto.NFVdto;
 
 import lombok.Data;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Data
 public class Server {
@@ -14,7 +12,7 @@ public class Server {
     private String id;
 
     //Vnf que es instalado en el Servidor
-    private Map<String, VnfShared> vnfs = new HashMap<>();
+    private Map<String, List<VnfShared>> vnfs = new HashMap<>();
 
     //Costo de Deployar o Instalar el VNF
     private int deploy;
@@ -25,14 +23,11 @@ public class Server {
     //Costo de Energia en Dolares por Watt
     private double energyCost;
 
-    //Capacidad de CPU del Servidor (Cantidad de Cores)
-    private int resourceCPU;
+    //Consumo de Energia por core en whatts
+    private int energyIdleWatts;
 
-    //Capacidad de RAM del Servidor (En GB)
-    private int resourceRAM;
-
-    //Capacidad de almacenamiento del Servidor (En GB)
-    private int resourceStorage;
+    //Capacidad maxima de Energia en Watts del Servidor
+    private int energyPeakWatts;
 
     //Costo por unidad de CPU del Servidor (En dolares)
     private double resourceCPUCost;
@@ -43,23 +38,24 @@ public class Server {
     //Costo por unidad de almacenamiento del Servidor (En dolares)
     private double resourceStorageCost;
 
-    //Consumo de Energia por core en whatts
-    private int energyPerCoreWatts;
-
-    //Capacidad maxima de Energia en Watts del Servidor
-    private int energyPeakWatts;
-
-    //RAM utilizada
-    private int resourceRAMUsed;
-
-    //Storage Utilizado
-    private int resourceStorageUsed;
+    //Capacidad de CPU del Servidor (Cantidad de Cores)
+    private int resourceCPU;
 
     //CPU utilizado
     private int resourceCPUUsed;
 
-    //Energia utilizada
-    private int energyUsed;
+    //Capacidad de RAM del Servidor (En GB)
+    private int resourceRAM;
+
+    //RAM utilizada
+    private int resourceRAMUsed;
+
+    //Capacidad de almacenamiento del Servidor (En GB)
+    private int resourceStorage;
+
+    //Storage Utilizado
+    private int resourceStorageUsed;
+
 
     public Server() {
     }
@@ -75,19 +71,24 @@ public class Server {
         this.resourceCPUCost = server.getResourceCPUCost();
         this.resourceRAMCost = server.getResourceRAMCost();
         this.resourceStorageCost = server.getResourceStorageCost();
-        this.energyPerCoreWatts = server.getEnergyPerCoreWatts();
+        this.energyIdleWatts = server.getEnergyIdleWatts();
         this.energyPeakWatts = server.getEnergyPeakWatts();
         this.resourceRAMUsed = server.getResourceRAMUsed();
         this.resourceStorageUsed = server.getResourceStorageUsed();
         this.resourceCPUUsed = server.getResourceCPUUsed();
-        this.energyUsed = server.getEnergyUsed();
 
-        Map<String, VnfShared> vnfs = new HashMap<>();
-        for(VnfShared vnfShared : server.getVnfs().values()){
-            VnfShared vnfSharedToCopy = new VnfShared(vnfShared);
-            vnfs.put(vnfSharedToCopy.getId(),vnfSharedToCopy);
-        }
-        this.vnfs = vnfs;
+        this.vnfs = server.getVnfs().entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey,
+                        e -> new ArrayList<>(copyVnfsShared(e.getValue()))));
+    }
+
+    public List<VnfShared> copyVnfsShared(List<VnfShared> vnfsShared){
+        List<VnfShared> vnfsharedToCopy = new ArrayList<>();
+
+        vnfsShared.forEach((vnfShared) -> {
+            vnfsharedToCopy.add( new VnfShared(vnfShared));
+        });
+        return vnfsharedToCopy;
     }
 
     @Override
@@ -98,18 +99,18 @@ public class Server {
         sb.append(", licenceCost=").append(licenceCost);
         sb.append(", deploy=").append(deploy);
         sb.append(", energyCost=").append(energyCost);
-        sb.append(", resourceCPU=").append(resourceCPU);
-        sb.append(", resourceRAM=").append(resourceRAM);
-        sb.append(", resourceStorage=").append(resourceStorage);
+        sb.append(", energyPeakWatts=").append(energyPeakWatts);
+        sb.append(", energyIdleWatts=").append(energyIdleWatts);
         sb.append(", resourceCPUCost=").append(resourceCPUCost);
         sb.append(", resourceRAMCost=").append(resourceRAMCost);
         sb.append(", resourceStorageCost=").append(resourceStorageCost);
-        sb.append(", energyPerCoreWatts=").append(energyPerCoreWatts);
-        sb.append(", energyPeakWatts=").append(energyPeakWatts);
-        sb.append(", resourceRAMUsed=").append(resourceRAMUsed);
-        sb.append(", resourceStorageUsed=").append(resourceStorageUsed);
+        sb.append(", resourceCPU=").append(resourceCPU);
         sb.append(", resourceCPUUsed=").append(resourceCPUUsed);
-        sb.append(", energyUsed=").append(energyUsed);
+        sb.append(", resourceRAM=").append(resourceRAM);
+        sb.append(", resourceRAMUsed=").append(resourceRAMUsed);
+        sb.append(", resourceStorage=").append(resourceStorage);
+        sb.append(", resourceStorageUsed=").append(resourceStorageUsed);
+
         sb.append('}');
         return sb.toString();
     }

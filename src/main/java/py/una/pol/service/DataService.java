@@ -139,7 +139,7 @@ public class DataService {
             String[] cpusCost = conf.getServerResourceCPUCost().split(separator);
             String[] ramsCost = conf.getServerResourceRAMCost().split(separator);
             String[] storagesCost = conf.getServerResourceStorageCost().split(separator);
-            String[] energyPerCore = conf.getServerEnergyPerCoreWatts().split(separator);
+            String[] energyIdle = conf.getServerEnergyIdleWatts().split(separator);
             String[] energyPeaks = conf.getServerEnergyPeakWatts().split(separator);
 
             for (int i = 0; i < conf.getServerSize(); i++) {
@@ -154,7 +154,7 @@ public class DataService {
                 server.setResourceCPUCost(Double.parseDouble(cpusCost[i]));
                 server.setResourceRAMCost(Double.parseDouble(ramsCost[i]));
                 server.setResourceStorageCost(Double.parseDouble(storagesCost[i]));
-                server.setEnergyPerCoreWatts(Integer.parseInt(energyPerCore[i]));
+                server.setEnergyIdleWatts(Integer.parseInt(energyIdle[i]));
                 server.setEnergyPeakWatts(Integer.parseInt(energyPeaks[i]));
 
                 logger.info(server.toString());

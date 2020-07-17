@@ -92,8 +92,8 @@ public class Configurations {
     private String serverResourceRAMCost;
     @Value("${server.resource.storage.cost}")
     private String serverResourceStorageCost;
-    @Value("${server.energy.per.core.watts}")
-    private String serverEnergyPerCoreWatts;
+    @Value("${server.energy.idle.watts}")
+    private String serverEnergyIdleWatts;
     @Value("${server.energy.peak.watts}")
     private String serverEnergyPeakWatts;
     @Value("${server.penalty.cpu.cost}")

@@ -64,7 +64,7 @@ public class ObjectiveFunctionService {
         solutions.getThroughputList().add(decimalFormat.format(calculateThroughput(traffics)));
     }
 
-    /*
+    /*  Formula = Paper 469
     Costo de la Energia en Dolares = suma de los costos(dolares) de energia utilizados en los nodos mas
     la energia en watts utilizada en cada servidor por el costo de energia correspondiente al servidor
      */
@@ -73,7 +73,10 @@ public class ObjectiveFunctionService {
         try {
             //Costo de energia consumida en los servidores donde se instalaron los VNFs
             for (Server server : servers) {
-                energyCost = energyCost + server.getEnergyUsed() * server.getEnergyCost();
+                double proportionCpu = (double) server.getResourceCPUUsed() / server.getResourceCPU();
+                        energyCost = energyCost +
+                        (server.getEnergyIdleWatts() +
+                                (server.getEnergyPeakWatts() - server.getEnergyIdleWatts()) * proportionCpu) * server.getEnergyCost();
             }
 
             //Costo monetario de energia de los nodos que se encuentran
@@ -124,8 +127,9 @@ public class ObjectiveFunctionService {
         try {
             //Suma del delay de procesamiento de cada VNF instalado y compartido
             for (Server server : servers)
-                for(VnfShared vnf : server.getVnfs().values())
-                    latency = latency + vnf.getDelay() * vnf.getVnfs().size();
+                for(List<VnfShared> vnfsShared : server.getVnfs().values())
+                    for(VnfShared vnfShared : vnfsShared)
+                        latency = latency + vnfShared.getDelay() * vnfShared.getVnfs().size();
 
             //Suma del delay de cada enlace de la ruta
             for (Link link : links)
@@ -143,8 +147,9 @@ public class ObjectiveFunctionService {
         try {
             //Suma del costo de deployar los VNFs en los servidores
             for (Server server : servers)
-                for(VnfShared vnf : server.getVnfs().values())
-                    deployCost = deployCost + vnf.getDeploy() + server.getDeploy();
+                for(List<VnfShared> vnfsShared : server.getVnfs().values())
+                    for(VnfShared vnfShared : vnfsShared)
+                        deployCost = deployCost + vnfShared.getDeploy() + server.getDeploy();
 
             return deployCost;
         } catch (Exception e) {
@@ -187,11 +192,11 @@ public class ObjectiveFunctionService {
             for (Server server : servers) {
                 //Suma del costo de licencia de cada servidor
                 licencesCost = server.getLicenceCost();
-                for (VnfShared vnf : server.getVnfs().values())
+                for (List<VnfShared> vnfsShared : server.getVnfs().values())
                     //Suma del costo de licencia de cada VNF
-                    licencesCost = licencesCost + vnf.getLicenceCost();
+                    for(VnfShared vnfShared : vnfsShared)
+                        licencesCost = licencesCost + vnfShared.getLicenceCost();
             }
-
             return licencesCost;
         } catch (Exception e) {
             logger.error("Error al calcular el costo de licencia total: " + e.getMessage());
@@ -213,9 +218,8 @@ public class ObjectiveFunctionService {
                         for (String linkId : path.getShortestPath().getLinks())
                             delayTotal = delayTotal + linksMap.get(linkId).getDelay();
 
-                    for (Vnf vnf : traffic.getSfc().getVnfs()) {
+                    for (Vnf vnf : traffic.getSfc().getVnfs())
                         delayTotal = delayTotal + vnfsShared.get(vnf.getId()).getDelay();
-                    }
 
                     if (traffic.getDelayMaxSLA() < delayTotal)
                         sloCost = sloCost + traffic.getPenaltyCostSLO();
@@ -341,9 +345,9 @@ public class ObjectiveFunctionService {
     public int calculateNumberIntances(List<Server> servers) throws Exception {
         int instances = 0;
         try {
-            for (Server server : servers){
+            for (Server server : servers)
                 instances = instances + server.getVnfs().size();
-            }
+
             return instances;
         } catch (Exception e) {
             logger.error("Error al calcular el numero de instacias: " + e.getMessage());
@@ -359,9 +363,8 @@ public class ObjectiveFunctionService {
             //Suma del ancho de banda de cada enlace de la ruta
             for (Traffic traffic : traffics) {
                 total = total + traffic.getBandwidth();
-                if (traffic.isProcessed()) {
+                if (traffic.isProcessed())
                     successful = successful + traffic.getBandwidth();
-                }
             }
             return (successful / total) * 100;
         } catch (Exception e) {
