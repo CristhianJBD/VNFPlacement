@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import py.una.pol.dto.NFVdto.*;
 import py.una.pol.dto.Path;
+import py.una.pol.dto.ResultPath;
 import py.una.pol.dto.Solutions;
 import py.una.pol.util.Configurations;
 
@@ -55,7 +56,7 @@ public class ObjectiveFunctionService {
         solutions.getHopsList().add(calculateHops(links));
         solutions.getBandwidthList().add(decimalFormat.format(calculateBandwidth(links)));
         solutions.getNumberInstancesList().add(calculateNumberIntances(servers));
-        solutions.getLoadTrafficList().add(decimalFormat.format(calculateLoadTraffic(links)));
+        solutions.getLoadTrafficList().add(decimalFormat.format(calculateLoadTraffic(linksMap,traffics,vnfsShared)));
         solutions.getResourcesCostList().add(decimalFormat.format(calculateResources(servers)));
         solutions.getLicencesCostList().add(decimalFormat.format(calculateLicencesCost(servers)));
         solutions.getFragmentationList().add(decimalFormat.format(calculateResourceFragmentation(servers, links)));
@@ -203,7 +204,7 @@ public class ObjectiveFunctionService {
             throw new Exception();
         }
     }
-// Analizar mejor
+
     public double calculateSLOCost(Map<String, Link> linksMap, List<Traffic> traffics,
                                    Map<String, VnfShared> vnfsShared) throws Exception {
         double sloCost = 0;
@@ -327,12 +328,26 @@ public class ObjectiveFunctionService {
         }
     }
 
-    public double calculateLoadTraffic(List<Link> links) throws Exception {
+    public double calculateLoadTraffic(Map<String, Link> linksMap, List<Traffic> traffics, Map<String, VnfShared> vnfsShared) throws Exception {
         double loadTraffic = 0;
+        int delay;
+        double bandwidth;
         try {
-            //suma de latencia por ancho de banda
-            for (Link link : links)
-                loadTraffic = loadTraffic + (link.getDelay() * link.getBandwidthUsed());
+            //formula del paper 197
+            for(Traffic traffic: traffics)
+                if(traffic.isProcessed()) {
+                    List<Vnf> sfc = traffic.getSfc().getVnfs();
+                    bandwidth = traffic.getBandwidth();
+                    for (int i = 0; i < sfc.size(); i++) {
+                        delay=0;
+                        for(String linkId: traffic.getResultPath().getPaths().get(i + 1).getShortestPath().getLinks())
+                            delay = delay + linksMap.get(linkId).getDelay();
+
+                        bandwidth = bandwidth * vnfsShared.get(sfc.get(i).getId()).getBandwidthFactor();
+
+                        loadTraffic = loadTraffic + (bandwidth * delay);
+                    }
+                }
 
             return loadTraffic;
         } catch (Exception e) {
