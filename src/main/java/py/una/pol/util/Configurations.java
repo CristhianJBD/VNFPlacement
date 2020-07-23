@@ -24,8 +24,16 @@ public class Configurations {
     public List<Node> nodes = new ArrayList<>();
 
     //Parametros de Sistema
-    @Value("${matrix.file.name}")
-    private String matrixFileName;
+    @Value("${links.file.name}")
+    private String linksFileName;
+    @Value("${nodes.file.name}")
+    private String nodesFileName;
+    @Value("${servers.file.name}")
+    private String serversFileName;
+    @Value("${vnfs.sfc.file.name}")
+    private String vnfsSfcFileName;
+    @Value("${vnfs.share.file.name}")
+    private String vnfsShareFileName;
     @Value("${traffics.file.name}")
     private String trafficsFileName;
     @Value("${number.solution}")
@@ -39,63 +47,6 @@ public class Configurations {
     @Value("${read.traffic.file}")
     private boolean readTrafficFile;
 
-    //VNF Shared
-    @Value("${vnf.shared.size}")
-    private Integer vnfSharedSize;
-    @Value("${vnf.shared.id}")
-    private String vnfSharedId;
-    @Value("${vnf.shared.delay}")
-    private String vnfSharedDelay;
-    @Value("${vnf.shared.deploy}")
-    private String vnfSharedDeploy;
-    @Value("${vnf.shared.resource.cpu}")
-    private String vnfSharedResourceCPU;
-    @Value("${vnf.shared.resource.ram}")
-    private String vnfSharedResourceRAM;
-    @Value("${vnf.shared.resource.storage}")
-    private String vnfSharedResourceStorage;
-    @Value("${vnf.shared.licence.cost}")
-    private String vnfSharedLicenceCost;
-    @Value("${vnf.shared.bandwidth.factor}")
-    private String vnfSharedBandwidthFactor;
-
-    //VNF Shared
-    @Value("${vnf.size}")
-    private Integer vnfSize;
-    @Value("${vnf.id}")
-    private String vnfId;
-    @Value("${vnf.resource.cpu}")
-    private String vnfResourceCPU;
-    @Value("${vnf.resource.ram}")
-    private String vnfResourceRAM;
-
-    //Servidor
-    @Value("${server.size}")
-    private Integer serverSize;
-    @Value("${server.id}")
-    private String serverId;
-    @Value("${server.licence.cost}")
-    private String serverLicenceCost;
-    @Value("${server.deploy}")
-    private String serverDeploy;
-    @Value("${server.energy.cost}")
-    private String serverEnergyCost;
-    @Value("${server.resource.cpu}")
-    private String serverResourceCPU;
-    @Value("${server.resource.ram}")
-    private String serverResourceRAM;
-    @Value("${server.resource.storage}")
-    private String serverResourceStorage;
-    @Value("${server.resource.cpu.cost}")
-    private String serverResourceCPUCost;
-    @Value("${server.resource.ram.cost}")
-    private String serverResourceRAMCost;
-    @Value("${server.resource.storage.cost}")
-    private String serverResourceStorageCost;
-    @Value("${server.energy.idle.watts}")
-    private String serverEnergyIdleWatts;
-    @Value("${server.energy.peak.watts}")
-    private String serverEnergyPeakWatts;
     @Value("${server.penalty.cpu.cost}")
     private double serverPenaltyCPUCost;
     @Value("${server.penalty.ram.cost}")
@@ -104,16 +55,6 @@ public class Configurations {
     private double serverPenaltyStorageCost;
     @Value("${link.penalty.bandwidth.cost}")
     private double linkPenaltyBandwidthCost;
-
-    //Nodo
-    @Value("${node.size}")
-    private Integer nodeSize;
-    @Value("${node.id}")
-    private String nodeId;
-    @Value("${node.energy.cost}")
-    private String nodeEnergyCost;
-    @Value("${node.server}")
-    private String nodeServer;
 
     //Trafico
     @Value("${traffic.bandwidth.min}")

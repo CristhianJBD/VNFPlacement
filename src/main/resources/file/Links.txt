@@ -1,0 +1,11 @@
+#[Nodo Origen(Id)] [Nodo Destino(Id)] [Delay(ms)] [Distancia(KM)] [Capacidad de ancho de banda(MB)] [Costo por MB(Dolar)]
+node1 node2 1 27 5000 0.000752
+node1 node4 2 31 6500 0.00081
+node2 node3 1 26 5100 0.00013
+node2 node4 2 30 6000 0.000267
+node3 node5 1 28 5500 0.000512
+node3 node7 3 32 6600 0.000623
+node4 node3 2 29 5600 0.000820
+node4 node5 2 26 5250 0.000325
+node5 node6 1 19 5150 0.000467
+node7 node6 1 20 5050 0.000532

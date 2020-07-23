@@ -1,8 +1,5 @@
 package py.una.pol.dto.NFVdto;
-
-
 import lombok.Data;
-import py.una.pol.util.Constants;
 
 import java.io.Serializable;
 
@@ -32,9 +29,8 @@ public class Vnf implements Serializable {
     }
 
     public Vnf(Vnf vnf) {
-        String[] split = vnf.getId().split(Constants.separatorVnf);
-        this.id = split[0];
-        this.type = split[1];
+        this.id = vnf.getId();
+        this.type = vnf.getType();
         this.resourceCPU = vnf.getResourceCPU();
         this.resourceRAM = vnf.getResourceRAM();
     }
@@ -43,6 +39,7 @@ public class Vnf implements Serializable {
     public String toString() {
         final StringBuilder sb = new StringBuilder("Vnf{");
         sb.append("id='").append(id).append('\'');
+        sb.append(", type=").append(type);
         sb.append(", resourceCPU=").append(resourceCPU);
         sb.append(", resourceRAM=").append(resourceRAM);
         sb.append('}');

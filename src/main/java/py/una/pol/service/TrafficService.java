@@ -82,7 +82,7 @@ public class TrafficService {
         String trafficStringToWrite;
         Gson gson = new Gson();
         try {
-            fileOutputStream = new FileOutputStream(new File(conf.getTrafficsFileName()));
+            fileOutputStream = new FileOutputStream(new File(System.getProperty("app.home") + conf.getTrafficsFileName()));
             objectOutputStream = new ObjectOutputStream(fileOutputStream);
 
             for (Traffic traffic : traffics) {
@@ -107,7 +107,7 @@ public class TrafficService {
         Gson gson = new Gson();
         String trafficStringRead;
         try {
-            fileInputStream = new FileInputStream(new File(conf.getTrafficsFileName()));
+            fileInputStream = new FileInputStream(new File(System.getProperty("app.home") + conf.getTrafficsFileName()));
             objectInputStream = new ObjectInputStream(fileInputStream);
 
             for (int i = 0; i < conf.getNumberTraffic(); i++) {
