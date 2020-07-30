@@ -45,7 +45,7 @@ public class VnfService {
             shortestPathMap = data.shortestPathMap;
             vnfSharedMap = data.vnfsShared;
 
-            traffics = trafficService.generateRandomtraffic(data.nodesMap, data.vnfs);
+            traffics = trafficService.generateRandomtraffic(data.graph, data.nodesMap, data.vnfs);
             for (int i = 1; i < conf.getNumberSolutions(); i++) {
                 nodesMap = loadNodesMapAux(data.nodesMap);
                 linksMap = loadLinkMapAux(data.linksMap);

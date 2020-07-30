@@ -61,10 +61,8 @@ public class Configurations {
     private int trafficBandwidthMin;
     @Value("${traffic.bandwidth.max}")
     private int trafficBandwidthMax;
-    @Value("${traffic.delay.sla.min}")
-    private int trafficDelaySlaMin;
-    @Value("${traffic.delay.sla.max}")
-    private int trafficDelaySlaMax;
+    @Value("${traffic.percentage.delay.max}")
+    private double trafficDelayMax;
     @Value("${traffic.penalty.slo.min}")
     private int trafficPenaltySloMin;
     @Value("${traffic.penalty.slo.max}")

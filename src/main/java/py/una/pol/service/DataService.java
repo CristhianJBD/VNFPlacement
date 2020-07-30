@@ -21,14 +21,14 @@ public class DataService {
     private final Configurations conf;
 
     private List<String> linksString;
-    private final Graph<Node, Link> graph = new SimpleGraph<>(Link.class);
+    public final Graph<Node, Link> graph = new SimpleGraph<>(Link.class);
     public Map<String, List<ShortestPath>> shortestPathMap = new HashMap<>();
     public Map<String, Node> nodes = new HashMap<>();
     public Map<String, Node> nodesMap = new HashMap<>();
     public Map<String, Link> linksMap = new HashMap<>();
     public Map<String, VnfShared> vnfsShared = new HashMap<>();
     public List<Vnf> vnfs = new ArrayList<>();
-    public  Map<String, Server> servers = new HashMap<>();
+    public Map<String, Server> servers = new HashMap<>();
 
     public DataService(Configurations conf) {
         this.conf = conf;
@@ -63,7 +63,7 @@ public class DataService {
             reader = new BufferedReader(new FileReader(System.getProperty("app.home") + conf.getVnfsShareFileName()));
 
             reader.readLine();
-            while ((vnfLine = reader.readLine()) != null){
+            while ((vnfLine = reader.readLine()) != null) {
                 vnfSplit = vnfLine.split(" ");
 
                 vnfShared = new VnfShared();
@@ -87,7 +87,7 @@ public class DataService {
             logger.error("Error al cargar los datos de los VNFs:" + e.getMessage());
             throw new Exception();
         } finally {
-            if(reader != null)
+            if (reader != null)
                 reader.close();
         }
     }
@@ -102,7 +102,7 @@ public class DataService {
             reader = new BufferedReader(new FileReader(System.getProperty("app.home") + conf.getVnfsSfcFileName()));
 
             reader.readLine();
-            while ((vnfLine = reader.readLine()) != null){
+            while ((vnfLine = reader.readLine()) != null) {
                 vnfSplit = vnfLine.split(" ");
 
                 vnf = new Vnf();
@@ -122,7 +122,7 @@ public class DataService {
             logger.error("Error al cargar los datos de los VNFs:" + e.getMessage());
             throw new Exception();
         } finally {
-            if(reader != null)
+            if (reader != null)
                 reader.close();
         }
     }
@@ -138,7 +138,7 @@ public class DataService {
             reader = new BufferedReader(new FileReader(System.getProperty("app.home") + conf.getServersFileName()));
 
             reader.readLine();
-            while ((serverLine = reader.readLine()) != null){
+            while ((serverLine = reader.readLine()) != null) {
                 serverSplit = serverLine.split(" ");
 
                 server = new Server();
@@ -166,7 +166,7 @@ public class DataService {
             logger.error("Error al cargar los datos de los Servidores: " + e.getMessage());
             throw new Exception();
         } finally {
-            if(reader != null)
+            if (reader != null)
                 reader.close();
         }
     }
@@ -182,7 +182,7 @@ public class DataService {
             reader = new BufferedReader(new FileReader(System.getProperty("app.home") + conf.getNodesFileName()));
 
             reader.readLine();
-            while ((nodeString = reader.readLine()) != null){
+            while ((nodeString = reader.readLine()) != null) {
                 splitNode = nodeString.split(" ");
 
                 node = new Node();
@@ -192,7 +192,7 @@ public class DataService {
 
                 logger.info(node.toString());
                 nodesMap.put(node.getId(), node);
-                nodes.put(node.getId(),node);
+                nodes.put(node.getId(), node);
             }
 
         } catch (NumberFormatException e) {
@@ -202,7 +202,7 @@ public class DataService {
             logger.error("Error al cargar los datos de los Nodos: " + e.getMessage());
             throw new Exception();
         } finally {
-            if(reader != null)
+            if (reader != null)
                 reader.close();
         }
     }
@@ -222,7 +222,7 @@ public class DataService {
             logger.error("Error al cargar las matrices: " + e.getMessage());
             throw new Exception();
         } finally {
-            if(reader != null)
+            if (reader != null)
                 reader.close();
         }
     }
@@ -230,7 +230,7 @@ public class DataService {
     private void loadGraph() throws Exception {
         Link link;
         try {
-            for (Node node: nodes.values())
+            for (Node node : nodes.values())
                 graph.addVertex(node);
 
             logger.info("Enlaces: ");
@@ -292,6 +292,30 @@ public class DataService {
 
         } catch (Exception e) {
             logger.error("Error al cargar kShortestPath: " + e.getMessage());
+            throw new Exception();
+        }
+    }
+
+    public double getDelayMax(SFC sfc, String originId, String destinyId) throws Exception {
+        try {
+            List<GraphPath<Node, Link>> paths;
+            double delayMin = 0;
+
+            KShortestPaths<Node, Link> pathInspector =
+                    new KShortestPaths<>(graph, 1, Integer.MAX_VALUE);
+
+            paths = pathInspector.getPaths(nodesMap.get(originId), nodesMap.get(destinyId));
+
+            for (Vnf vnf : sfc.getVnfs())
+                delayMin = delayMin + vnfsShared.get(vnf.getId()).getDelay();
+
+            if (paths != null && paths.size() > 0)
+                for (Link link : paths.get(0).getEdgeList())
+                    delayMin = delayMin + link.getDelay();
+
+            return delayMin + (delayMin * (conf.getTrafficDelayMax() / 100));
+        }catch (Exception e){
+            logger.error("Error al calcular el delay maximo: " + e.getMessage());
             throw new Exception();
         }
     }

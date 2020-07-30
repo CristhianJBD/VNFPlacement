@@ -19,7 +19,7 @@ public class Traffic implements Serializable {
     private int bandwidth;
 
     //Maximo Delay permitido por el trafico de acuero al SLA
-    private int delayMaxSLA;
+    private double delayMaxSLA;
 
     //Costo en dolares por falta del SLA
     private double penaltyCostSLO;
