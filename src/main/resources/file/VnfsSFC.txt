@@ -1,4 +1,4 @@
-#[Vnf(Id)] [Tipo Vnf] [Requerimiento Cores] [Requerimiento RAM(GB)]
+#[Vnf(Id)] [Tipo Vnf cite 187] [Requerimiento Cores cite 187] [Requerimiento RAM(GB)cite 187]
 Firewall A 3 2
 Firewall B 2 1
 IDS A 3 2
