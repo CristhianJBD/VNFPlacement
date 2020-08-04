@@ -84,7 +84,7 @@ public class DataService {
             logger.error("Error al parsear los datos de los VNFs: " + e.getMessage());
             throw new Exception();
         } catch (Exception e) {
-            logger.error("Error al cargar los datos de los VNFs:" + e.getMessage());
+            logger.error("Error al cargar los datos de los VNFs Shared:" + e.getMessage());
             throw new Exception();
         } finally {
             if (reader != null)
@@ -144,16 +144,15 @@ public class DataService {
                 server = new Server();
                 server.setId(serverSplit[0].trim());
                 server.setLicenceCost(Integer.parseInt(serverSplit[1]));
-                server.setEnergyCost(Double.parseDouble(serverSplit[2]));
-                server.setDeploy(Integer.parseInt(serverSplit[3]));
-                server.setResourceCPU(Integer.parseInt(serverSplit[4]));
-                server.setResourceRAM(Integer.parseInt(serverSplit[5]));
-                server.setResourceStorage(Integer.parseInt(serverSplit[6]));
-                server.setResourceCPUCost(Double.parseDouble(serverSplit[7]));
-                server.setResourceRAMCost(Double.parseDouble(serverSplit[8]));
-                server.setResourceStorageCost(Double.parseDouble(serverSplit[9]));
-                server.setEnergyIdleWatts(Integer.parseInt(serverSplit[10]));
-                server.setEnergyPeakWatts(Integer.parseInt(serverSplit[11]));
+                server.setDeploy(Integer.parseInt(serverSplit[2]));
+                server.setResourceCPU(Integer.parseInt(serverSplit[3]));
+                server.setResourceRAM(Integer.parseInt(serverSplit[4]));
+                server.setResourceStorage(Integer.parseInt(serverSplit[5]));
+                server.setResourceCPUCost(Double.parseDouble(serverSplit[6]));
+                server.setResourceRAMCost(Double.parseDouble(serverSplit[7]));
+                server.setResourceStorageCost(Double.parseDouble(serverSplit[8]));
+                server.setEnergyIdleWatts(Integer.parseInt(serverSplit[9]));
+                server.setEnergyPeakWatts(Integer.parseInt(serverSplit[10]));
 
                 logger.info(server.toString());
                 servers.put(server.getId(), server);

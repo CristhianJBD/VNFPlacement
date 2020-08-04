@@ -44,9 +44,7 @@ public class ObjectiveFunctionService {
                 servers.add(node.getServer());
 
         solutions.getEnergyCostList().add(decimalFormat.format(
-                calculateEnergyCost(nodes, servers)));
-        solutions.getForwardingTrafficCostList().add(decimalFormat.format(
-                calculateForwardingTrafficCost(nodes, links)));
+                calculateEnergyCost(nodes)));
         solutions.getSloCostList().add(decimalFormat.format(
                 calculateSLOCost(linksMap, traffics, vnfsShared)));
         solutions.getHostSizeList().add(calculateHostSize(servers));
@@ -69,21 +67,26 @@ public class ObjectiveFunctionService {
     Costo de la Energia en Dolares = suma de los costos(dolares) de energia utilizados en los nodos mas
     la energia en watts utilizada en cada servidor por el costo de energia correspondiente al servidor
      */
-    public double calculateEnergyCost(List<Node> nodes, List<Server> servers) throws Exception {
+    public double calculateEnergyCost(List<Node> nodes) throws Exception {
         double energyCost = 0;
+        Server server;
         try {
-            //Costo de energia consumida en los servidores donde se instalaron los VNFs
-            for (Server server : servers) {
-                double proportionCpu = (double) server.getResourceCPUUsed() / server.getResourceCPU();
-                        energyCost = energyCost +
-                        (server.getEnergyIdleWatts() +
-                                (server.getEnergyPeakWatts() - server.getEnergyIdleWatts()) * proportionCpu) * server.getEnergyCost();
-            }
 
-            //Costo monetario de energia de los nodos que se encuentran
-            // en la ruta por la cantidad de flujos que pasan por el nodo
-            for (Node node : nodes)
+            for (Node node : nodes){
+                //Costo monetario de energia de los nodos que se encuentran
+                // en la ruta por la cantidad de flujos que pasan por el nodo
                 energyCost = energyCost + node.getEnergyCost() * node.getTrafficAmount();
+
+                //Costo de energia consumida en los servidores donde se instalaron los VNFs
+                server = node.getServer();
+                if (server != null && server.getVnfs().size() > 0) {
+                    double proportionCpu = (double) server.getResourceCPUUsed() / server.getResourceCPU();
+                    energyCost = energyCost +
+                            (server.getEnergyIdleWatts()
+                                    + (server.getEnergyPeakWatts() - server.getEnergyIdleWatts()) * proportionCpu)
+                                    * node.getEnergyCost();
+                }
+            }
 
             return energyCost;
         } catch (Exception e) {
@@ -93,23 +96,18 @@ public class ObjectiveFunctionService {
     }
 
     /*
-        Costo de Reenvio de trafico = suma del costo en dolar por el ancho de banda utilizado en cada enlace
-        mas la energia consumida en los nodos en dolares
+        Suma del costo de todos los enlaces, costo por unidad de Mbit por ancho de banda
      */
-    public double calculateForwardingTrafficCost(List<Node> nodes, List<Link> links) throws Exception {
-        double forwardingTrafficCost = 0;
+    public double calculateAllLinkCost(List<Link> links) throws Exception {
+        double linksCost = 0;
         try {
-            //Costo de energia consumida en los nodos en dolares
-            for (Node node : nodes)
-                forwardingTrafficCost = forwardingTrafficCost + node.getEnergyCost() * node.getTrafficAmount();
-
-            //Ancho de banda de cada enlace por el costo en dolares por ancho de banda de cada enlace
+            //suma del costo unitario * Ancho de banda utilizado
             for (Link link : links)
-                forwardingTrafficCost = forwardingTrafficCost + (link.getBandwidthUsed() * link.getBandwidthCost());
+                linksCost = linksCost + (link.getBandwidthUsed() * link.getBandwidthCost());
 
-            return forwardingTrafficCost;
+            return linksCost;
         } catch (Exception e) {
-            logger.error("Error al calcular la energia minima: " + e.getMessage());
+            logger.error("Error al calcular el costo de todos los enlaces: " + e.getMessage());
             throw new Exception();
         }
     }
@@ -310,20 +308,6 @@ public class ObjectiveFunctionService {
             return maximunUseLink;
         } catch (Exception e) {
             logger.error("Error al calcular la maxima utilizacion del enlace: " + e.getMessage());
-            throw new Exception();
-        }
-    }
-
-    public double calculateAllLinkCost(List<Link> links) throws Exception {
-        double linksCost = 0;
-        try {
-            //suma del costo unitario * Ancho de banda requerido
-            for (Link link : links)
-                linksCost = linksCost + link.getBandwidthUsed() * link.getBandwidthCost();
-
-            return linksCost;
-        } catch (Exception e) {
-            logger.error("Error al calcular el costo de todos los enlaces: " + e.getMessage());
             throw new Exception();
         }
     }

@@ -20,9 +20,6 @@ public class Server {
     //Costo de licencia del Servidor
     private double licenceCost;
 
-    //Costo de Energia en Dolares por Watt
-    private double energyCost;
-
     //Consumo de Energia por core en whatts
     private int energyIdleWatts;
 
@@ -64,7 +61,6 @@ public class Server {
         this.id = server.getId();
         this.licenceCost = server.getLicenceCost();
         this.deploy = server.getDeploy();
-        this.energyCost = server.getEnergyCost();
         this.resourceCPU = server.getResourceCPU();
         this.resourceRAM = server.getResourceRAM();
         this.resourceStorage = server.getResourceStorage();
@@ -98,7 +94,6 @@ public class Server {
         sb.append(", vnf=").append(vnfs);
         sb.append(", licenceCost=").append(licenceCost);
         sb.append(", deploy=").append(deploy);
-        sb.append(", energyCost=").append(energyCost);
         sb.append(", energyPeakWatts=").append(energyPeakWatts);
         sb.append(", energyIdleWatts=").append(energyIdleWatts);
         sb.append(", resourceCPUCost=").append(resourceCPUCost);

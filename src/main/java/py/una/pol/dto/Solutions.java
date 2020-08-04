@@ -9,7 +9,6 @@ import java.util.List;
 public class Solutions {
 
     private List<String> energyCostList = new ArrayList<>();
-    private List<String> forwardingTrafficCostList = new ArrayList<>();
     private List<String> bandwidthList = new ArrayList<>();
     private List<String> loadTrafficList = new ArrayList<>();
     private List<String> resourcesCostList = new ArrayList<>();
@@ -31,7 +30,6 @@ public class Solutions {
     public String toString() {
         final StringBuilder sb = new StringBuilder("Solutions").append("\n");
         sb.append("Energy Cost(Dolar)=").append(energyCostList).append("\n");
-        sb.append("Forwarding Traffic Cost(Dolar)=").append(forwardingTrafficCostList).append("\n");
         sb.append("Bandwidth(MB)=").append(bandwidthList).append("\n");
         sb.append("Delay Cost=").append(delayCostList).append("\n");
         sb.append("Load Traffic=").append(loadTrafficList).append("\n");
