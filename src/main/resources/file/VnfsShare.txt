@@ -1,8 +1,8 @@
-#[Vnf(Id)] [Delay procesamiento(ms)cite 461] [Costo Deployar(Dolar)] [Licencia Costo(Dolar)- cite 461 pero ponemos +-50] [Ancho de Banda factor] [Requerimiento Cores cite 187] [Requerimiento RAM(GB)cite 187] [Requerimiento Almacenamiento(GB)]
-Firewall 20 2 50 1.0 15 12 35
-IDS 12 3 45 1.3 10 9 25
-Proxy 5 2 60 1.5 14 12 28
-NAT 8 3 55 0.8 12 10 30
-DPI 10 4 52 1.2 10 8 26
+#[Vnf(Id)] [Delay procesamiento(ms)cite 461] [Costo Deployar(Dolar) aprox 10 USD sin referencia] [Licencia Costo(Dolar)- cite 461 pero ponemos +-50] [Ancho de Banda factor sin ref] [Requerimiento Cores cite 187] [Requerimiento RAM(GB)cite 187] [Requerimiento Almacenamiento(GB) sin cita]
+Firewall 20 10 50 1.0 15 12 35
+IDS 12 9 45 1.3 10 9 25
+Proxy 5 12 60 1.5 14 12 28
+NAT 8 8 55 0.8 12 10 30
+DPI 10 11 52 1.2 10 8 26
 
 
