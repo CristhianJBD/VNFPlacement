@@ -1,14 +1,15 @@
 package py.una.pol.service;
 
 import org.apache.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import py.una.pol.dto.NFVdto.*;
 import py.una.pol.dto.Path;
-import py.una.pol.dto.ResultPath;
 import py.una.pol.dto.Solutions;
 import py.una.pol.util.Configurations;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.ObjectOutputStream;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -21,12 +22,12 @@ import java.util.stream.Collectors;
 public class ObjectiveFunctionService {
     Logger logger = Logger.getLogger(ObjectiveFunctionService.class);
 
-    private final Configurations configuration;
+    private final Configurations conf;
 
     Solutions solutions = new Solutions();
 
     public ObjectiveFunctionService(Configurations configuration) {
-        this.configuration = configuration;
+        this.conf = configuration;
     }
 
     public void solutionFOs(Map<String, Node> nodesMap, Map<String, Link> linksMap,
@@ -239,19 +240,19 @@ public class ObjectiveFunctionService {
             for (Server server : servers) {
                 fragmentation = fragmentation +
                         (server.getResourceCPU() - server.getResourceCPUUsed()) *
-                                configuration.getServerPenaltyCPUCost();
+                                conf.getServerPenaltyCPUCost();
                 fragmentation = fragmentation +
                         (server.getResourceRAM() - server.getResourceRAMUsed()) *
-                                configuration.getServerPenaltyRAMCost();
+                                conf.getServerPenaltyRAMCost();
                 fragmentation = fragmentation +
                         (server.getResourceStorage() - server.getResourceStorageUsed()) *
-                                configuration.getServerPenaltyStorageCost();
+                                conf.getServerPenaltyStorageCost();
             }
 
             //Costo de multa por el ancho banda que sobra de la capacidad total de cada enlace
             for (Link link : links)
                 fragmentation = fragmentation +
-                        (link.getBandwidth() - link.getBandwidthUsed()) * configuration.getLinkPenaltyBandwidthCost();
+                        (link.getBandwidth() - link.getBandwidthUsed()) * conf.getLinkPenaltyBandwidthCost();
 
             return fragmentation;
         } catch (Exception e) {
@@ -371,4 +372,63 @@ public class ObjectiveFunctionService {
             throw new Exception();
         }
     }
+
+    public void writeSolutions(Solutions solutions) throws Exception {
+        FileOutputStream fileOutputStream = null;
+        ObjectOutputStream objectOutputStream = null;
+        try {
+            fileOutputStream = new FileOutputStream(new File(System.getProperty("app.home") + conf.getSolutionsFileName()));
+            objectOutputStream = new ObjectOutputStream(fileOutputStream);
+
+            String header = "," +
+            "Energy Cost(Dolar)" + "," +
+            "Bandwidth(MB)" + "," +
+            "Delay Cost" + "," +
+            "Load Traffic" + "," +
+            "Deploy Cost" + "," +
+            "Resources Cost(Dolar)" + "," +
+            "Fragmentation(Dolar)" + "," +
+            "All Links Cost(Dolar)" + "," +
+            "Max Use Link(MB)" + "," +
+            "Licences Cost(Dolar)" + "," +
+            "Slo Cost(Dolar)" + "," +
+            "Distance(KM)" + "," +
+            "Hops" + "," +
+            "Host Size" + "," +
+            "Number Instances" + "," +
+            "Throughput(%)" + "\n";
+            objectOutputStream.writeObject(header);
+
+            for (int i = 0; i < conf.getNumberSolutions(); i++) {
+                String sb = "," +
+                solutions.getEnergyCostList().get(i) + "," +
+                solutions.getBandwidthList().get(i) + "," +
+                solutions.getDelayCostList().get(i) + "," +
+                solutions.getLoadTrafficList().get(i) + "," +
+                solutions.getDeployCostList().get(i) + "," +
+                solutions.getResourcesCostList().get(i) + "," +
+                solutions.getFragmentationList().get(i) + "," +
+                solutions.getAllLinksCostList().get(i) + "," +
+                solutions.getMaxUseLinkList().get(i) + "," +
+                solutions.getLicencesCostList().get(i) + "," +
+                solutions.getSloCostList().get(i) + "," +
+                solutions.getDistanceList().get(i) + "," +
+                solutions.getHopsList().get(i) + "," +
+                solutions.getHostSizeList().get(i) + "," +
+                solutions.getNumberInstancesList().get(i) + "," +
+                solutions.getThroughputList().get(i) + "\n";
+                objectOutputStream.writeObject(sb);
+            }
+        } catch (Exception e) {
+            logger.error("Error al escribir en el archivo de traficos");
+            throw new Exception();
+        } finally {
+            if (objectOutputStream != null)
+                objectOutputStream.close();
+            if (fileOutputStream != null)
+                fileOutputStream.close();
+        }
+    }
+
+
 }

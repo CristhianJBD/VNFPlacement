@@ -46,7 +46,7 @@ public class VnfService {
             vnfSharedMap = data.vnfsShared;
 
             traffics = trafficService.generateRandomtraffic(data.graph, data.nodesMap, data.vnfs);
-            for (int i = 1; i < conf.getNumberSolutions(); i++) {
+            for (int i = 1; i <= conf.getNumberSolutions(); i++) {
                 nodesMap = loadNodesMapAux(data.nodesMap);
                 linksMap = loadLinkMapAux(data.linksMap);
                 int count = 1;
@@ -76,6 +76,7 @@ public class VnfService {
                 ofs.solutionFOs(nodesMap, linksMap, traffics, data.vnfsShared);
             }
             logger.info(ofs.solutions);
+            ofs.writeSolutions(ofs.solutions);
         } catch (Exception e) {
             logger.error("Error VNF placement: " + e.getMessage());
         }

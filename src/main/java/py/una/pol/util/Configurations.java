@@ -36,6 +36,8 @@ public class Configurations {
     private String vnfsShareFileName;
     @Value("${traffics.file.name}")
     private String trafficsFileName;
+    @Value("${solutions.file.name}")
+    private String solutionsFileName;
     @Value("${number.solution}")
     private Integer numberSolutions;
     @Value("${number.traffic}")
