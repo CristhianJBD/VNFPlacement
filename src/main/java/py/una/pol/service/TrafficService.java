@@ -2,9 +2,6 @@ package py.una.pol.service;
 
 import com.google.gson.Gson;
 import org.apache.log4j.Logger;
-import org.jgrapht.Graph;
-import org.jgrapht.GraphPath;
-import org.jgrapht.alg.shortestpath.KShortestPaths;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import py.una.pol.dto.NFVdto.*;
@@ -29,13 +26,13 @@ public class TrafficService {
         this.conf = conf;
     }
 
-    public List<Traffic> generateRandomtraffic(Graph<Node, Link> graph, Map<String, Node> nodesMap, List<Vnf> vnfs) throws Exception {
+    public List<Traffic> generateRandomtraffic(Map<String, Node> nodesMap, List<Vnf> vnfs) throws Exception {
         List<Traffic> traffics = new ArrayList<>();
         Random rn = new Random();
         int sfcSize;int nodesSize;boolean aux;
         String[] nodesIdArray = new String[nodesMap.size()];
         try {
-            if (conf.isReadTrafficFile()) {
+            if (conf.isTrafficsReadFile()) {
                 traffics = readTraffics();
             } else {
                 int i = 0;
@@ -72,6 +69,52 @@ public class TrafficService {
                     traffic.setDelayMaxSLA(data.getDelayMax(sfc, traffic.getNodeOriginId(), traffic.getNodeDestinyId()));
 
                     traffics.add(traffic);
+                }
+                writeTraffics(traffics);
+            }
+
+            return traffics;
+        } catch (Exception e) {
+            logger.error("Error al generar el trafico: " + e.getMessage());
+            throw new Exception();
+        }
+    }
+
+    public List<Traffic> generateAllToAlltraffic(Map<String, Node> nodesMap, List<Vnf> vnfs) throws Exception {
+        List<Traffic> traffics = new ArrayList<>();
+        Random rn = new Random();
+        int sfcSize;
+        try {
+            if (conf.isTrafficsReadFile()) {
+                traffics = readTraffics();
+            } else {
+
+                for (Node nodeOrigin : nodesMap.values()) {
+                    for(Node nodeDestiny : nodesMap.values()){
+                        if(!nodeDestiny.getId().equalsIgnoreCase(nodeOrigin.getId())) {
+                            Traffic traffic = new Traffic();
+                            traffic.setNodeOriginId(nodeOrigin.getId());
+                            traffic.setNodeDestinyId(nodeDestiny.getId());
+                            traffic.setBandwidth(rn.nextInt
+                                    (conf.getTrafficBandwidthMax() - conf.getTrafficBandwidthMin() + 1) + conf.getTrafficBandwidthMin());
+                            traffic.setPenaltyCostSLO(rn.nextInt
+                                    (conf.getTrafficPenaltySloMax() - conf.getTrafficPenaltySloMin() + 1) + conf.getTrafficPenaltySloMin());
+                            traffic.setProcessed(false);
+
+                            sfcSize = rn.nextInt(conf.getTrafficSfcMax() - conf.getTrafficSfcMin() + 1) + conf.getTrafficSfcMin();
+
+                            Vnf vnf;
+                            SFC sfc = new SFC();
+                            for (int k = 0; k < sfcSize; k++) {
+                                vnf = new Vnf(vnfs.get(rn.nextInt(vnfs.size())));
+                                sfc.getVnfs().add(vnf);
+                            }
+                            traffic.setSfc(sfc);
+                            traffic.setDelayMaxSLA(data.getDelayMax(sfc, traffic.getNodeOriginId(), traffic.getNodeDestinyId()));
+
+                            traffics.add(traffic);
+                        }
+                    }
                 }
                 writeTraffics(traffics);
             }
