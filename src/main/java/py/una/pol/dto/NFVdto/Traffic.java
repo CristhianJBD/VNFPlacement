@@ -33,6 +33,12 @@ public class Traffic implements Serializable {
     //Solucion del trafico
     private ResultPath resultPath;
 
+    //Cantidad de rechazos por sobrecarga de enlaces
+    private int rejectLink;
+
+    //Cantidad de rechazos por sobrecarga en los nodos
+    private int rejectNode;
+
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder("Traffic: ");

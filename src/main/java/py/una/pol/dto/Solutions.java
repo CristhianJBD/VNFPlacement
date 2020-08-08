@@ -24,7 +24,8 @@ public class Solutions {
     private List<Integer> hopsList = new ArrayList<>();
     private List<Integer> numberInstancesList = new ArrayList<>();
     private List<String> throughputList = new ArrayList<>();
-
+    private List<String> rejectLink = new ArrayList<>();
+    private List<String> rejectNode = new ArrayList<>();
 
     @Override
     public String toString() {
@@ -45,6 +46,8 @@ public class Solutions {
         sb.append("Host Size=").append(hostSizeList).append("\n");
         sb.append("Number Instances=").append(numberInstancesList).append("\n");
         sb.append("Throughput(%)=").append(throughputList).append("\n");
+        sb.append("Reject-Link(%)=").append(rejectLink).append("\n");
+        sb.append("Reject-Node(%)=").append(rejectNode).append("\n");
         return sb.toString();
     }
 }

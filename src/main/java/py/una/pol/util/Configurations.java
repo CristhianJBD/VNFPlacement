@@ -24,19 +24,19 @@ public class Configurations {
     public List<Node> nodes = new ArrayList<>();
 
     //Parametros de Sistema
-    @Value("${links.file.name}")
+    @Value("${file.name.links}")
     private String linksFileName;
-    @Value("${nodes.file.name}")
+    @Value("${file.name.nodes}")
     private String nodesFileName;
-    @Value("${servers.file.name}")
+    @Value("${file.name.servers}")
     private String serversFileName;
-    @Value("${vnfs.sfc.file.name}")
+    @Value("${file.name.vnfs.sfc}")
     private String vnfsSfcFileName;
-    @Value("${vnfs.share.file.name}")
+    @Value("${file.name.vnfs.share}")
     private String vnfsShareFileName;
-    @Value("${traffics.file.name}")
+    @Value("${file.name.traffics}")
     private String trafficsFileName;
-    @Value("${solutions.file.name}")
+    @Value("${file.name.solutions}")
     private String solutionsFileName;
     @Value("${number.solution}")
     private Integer numberSolutions;
@@ -46,8 +46,6 @@ public class Configurations {
     private Integer k;
     @Value("${retries.solution}")
     private Integer retriesSolution;
-    @Value("${read.traffic.file}")
-    private boolean readTrafficFile;
 
     @Value("${server.penalty.cpu.cost}")
     private double serverPenaltyCPUCost;
@@ -59,6 +57,10 @@ public class Configurations {
     private double linkPenaltyBandwidthCost;
 
     //Trafico
+    @Value("${traffics.read.file}")
+    private boolean trafficsReadFile;
+    @Value("${traffics.random}")
+    private boolean trafficsRandom;
     @Value("${traffic.bandwidth.min}")
     private int trafficBandwidthMin;
     @Value("${traffic.bandwidth.max}")

@@ -45,7 +45,11 @@ public class VnfService {
             shortestPathMap = data.shortestPathMap;
             vnfSharedMap = data.vnfsShared;
 
-            traffics = trafficService.generateRandomtraffic(data.graph, data.nodesMap, data.vnfs);
+            if(conf.isTrafficsRandom())
+                traffics = trafficService.generateRandomtraffic(data.nodesMap, data.vnfs);
+            else
+                traffics = trafficService.generateAllToAlltraffic(data.nodesMap, data.vnfs);
+
             for (int i = 1; i <= conf.getNumberSolutions(); i++) {
                 nodesMap = loadNodesMapAux(data.nodesMap);
                 linksMap = loadLinkMapAux(data.linksMap);
@@ -54,6 +58,7 @@ public class VnfService {
                 for (Traffic traffic : traffics) {
                     graphMultiStage = createGraphtMultiStage(traffic);
                     if (graphMultiStage == null) {
+                        traffic.setRejectNode(1);
                         traffic.setProcessed(false);
                         traffic.setResultPath(null);
                         logger.warn(count + "- No Grafo Multi-Estados: " +
@@ -242,7 +247,7 @@ public class VnfService {
                     } else {
                         vnf = traffic.getSfc().getVnfs().get(indexVnf);
                         if (!isResourceAvailableGraph(originNodeId, randomNodeId, bandwidtCurrent,
-                                vnf, nodesMapAux, linksMapAux, shortestPath, serverVnf))
+                                vnf, nodesMapAux, linksMapAux, shortestPath, serverVnf, traffic))
                             break;
                         else {
                             bandwidtCurrent = vnfSharedMap.get(vnf.getId()).getBandwidthFactor() * bandwidtCurrent;
@@ -269,7 +274,7 @@ public class VnfService {
     private boolean isResourceAvailableGraph(String nodeOriginId, String nodeDestinyId,
                                              double bandwidtCurrent, Vnf vnf, Map<String, Node> nodesMapAux,
                                              Map<String, Link> linksMapAux, ShortestPath shortestPath,
-                                             List<String> serverVnf) throws Exception {
+                                             List<String> serverVnf, Traffic traffic) throws Exception {
         int cpuToUse, ramToUse;
         VnfShared vnfToInstall;
         List<VnfShared> vnfsShared;
@@ -290,8 +295,10 @@ public class VnfService {
                         vnfsShared.add(vnfToInstall);
                         server.getVnfs().put(vnf.getId(), vnfsShared);
                         serverVnf.add(node.getId());
-                    } else
+                    } else {
+                        traffic.setRejectNode(traffic.getRejectNode() + 1);
                         return false;
+                    }
                 } else {
                     //Buscar VNF compartido para reutilizar
                     for (VnfShared vnfShared : vnfsShared) {
@@ -312,19 +319,23 @@ public class VnfService {
                         vnfsShared.add(vnfToInstall);
                         server.getVnfs().put(vnf.getId(), vnfsShared);
                         serverVnf.add(node.getId());
-                    } else
+                    } else {
+                        traffic.setRejectNode(traffic.getRejectNode() + 1);
                         return false;
+                    }
                 }
-            } else
+            } else{
+                traffic.setRejectNode(traffic.getRejectNode() + 1);
                 return false;
-
+            }
             if (!nodeDestinyId.equals(nodeOriginId)) {
                 for (String linkId : shortestPath.getLinks()) {
                     link = linksMapAux.get(linkId);
                     bandwidtUsed = link.getBandwidthUsed() + bandwidtCurrent;
-                    if (link.getBandwidth() < bandwidtUsed)
+                    if (link.getBandwidth() < bandwidtUsed) {
+                        traffic.setRejectLink(traffic.getRejectLink() + 1);
                         return false;
-                    else {
+                    }else {
                         link.setBandwidthUsed(bandwidtUsed);
                         link.setTrafficAmount(link.getTrafficAmount() + 1);
                     }
