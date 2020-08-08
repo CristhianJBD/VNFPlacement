@@ -64,6 +64,7 @@ public class ObjectiveFunctionService {
         solutions.getThroughputList().add(decimalFormat.format(calculateThroughput(traffics)));
         solutions.getRejectLink().add(decimalFormat.format(rejectLink(traffics)));
         solutions.getRejectNode().add(decimalFormat.format(rejectNode(traffics)));
+        solutions.getAttendVnfs().add(decimalFormat.format(attendVnfs(traffics)));
     }
 
     /*  Formula = Paper 469
@@ -410,6 +411,23 @@ public class ObjectiveFunctionService {
         }
     }
 
+    //Porcentaje de atendidos de los vnfs
+    private double attendVnfs(List<Traffic> traffics) throws Exception {
+        double attend = 0;
+        double total = 0;
+        try {
+            for (Traffic traffic : traffics) {
+                total = total + traffic.getSfc().getVnfs().size();
+                if (traffic.isProcessed())
+                    attend = attend + traffic.getSfc().getVnfs().size();
+            }
+            return (attend / total) * 100;
+        } catch (Exception e) {
+            logger.error("Error al calcular la cantidad de vnfs atendidos: " + e.getMessage());
+            throw new Exception();
+        }
+    }
+
 
 
     public void writeSolutions(Solutions solutions) throws Exception {
@@ -436,6 +454,7 @@ public class ObjectiveFunctionService {
             "Host Size" + "," +
             "Number Instances" + "," +
             "Throughput(%)" + "," +
+            "Attend Vnfs(%)" + "," +
             "Reject-Link" + "," +
             "Reject-Node" + "\n";
 
@@ -459,6 +478,7 @@ public class ObjectiveFunctionService {
                 solutions.getHostSizeList().get(i) + "," +
                 solutions.getNumberInstancesList().get(i) + "," +
                 solutions.getThroughputList().get(i) + "," +
+                solutions.getAttendVnfs().get(i) + "," +
                 solutions.getRejectLink().get(i) + "," +
                 solutions.getRejectNode().get(i) + "\n";
 

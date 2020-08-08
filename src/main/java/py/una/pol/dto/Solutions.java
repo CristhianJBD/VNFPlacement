@@ -26,6 +26,7 @@ public class Solutions {
     private List<String> throughputList = new ArrayList<>();
     private List<String> rejectLink = new ArrayList<>();
     private List<String> rejectNode = new ArrayList<>();
+    private List<String> attendVnfs = new ArrayList<>();
 
     @Override
     public String toString() {
@@ -46,8 +47,10 @@ public class Solutions {
         sb.append("Host Size=").append(hostSizeList).append("\n");
         sb.append("Number Instances=").append(numberInstancesList).append("\n");
         sb.append("Throughput(%)=").append(throughputList).append("\n");
+        sb.append("Attend Vnfs(%)=").append(attendVnfs).append("\n");
         sb.append("Reject-Link(%)=").append(rejectLink).append("\n");
         sb.append("Reject-Node(%)=").append(rejectNode).append("\n");
+
         return sb.toString();
     }
 }
