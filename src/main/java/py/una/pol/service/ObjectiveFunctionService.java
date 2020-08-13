@@ -437,49 +437,49 @@ public class ObjectiveFunctionService {
             fileOutputStream = new FileOutputStream(new File(System.getProperty("app.home") + conf.getSolutionsFileName()));
             objectOutputStream = new ObjectOutputStream(fileOutputStream);
 
-            String header = "," +
-            "Energy Cost(Dolar)" + "," +
-            "Bandwidth(MB)" + "," +
-            "Delay Cost" + "," +
-            "Load Traffic" + "," +
-            "Deploy Cost" + "," +
-            "Resources Cost(Dolar)" + "," +
-            "Fragmentation(Dolar)" + "," +
-            "All Links Cost(Dolar)" + "," +
-            "Max Use Link(MB)" + "," +
-            "Licences Cost(Dolar)" + "," +
-            "Slo Cost(Dolar)" + "," +
-            "Distance(KM)" + "," +
-            "Hops" + "," +
-            "Host Size" + "," +
-            "Number Instances" + "," +
-            "Throughput(%)" + "," +
-            "Attend Vnfs(%)" + "," +
-            "Reject-Link" + "," +
+            String header = "" +
+            "Energy Cost(Dolar)" + ";" +
+            "Bandwidth(MB)" + ";" +
+            "Delay Cost" + ";" +
+            "Load Traffic" + ";" +
+            "Deploy Cost" + ";" +
+            "Resources Cost(Dolar)" + ";" +
+            "Fragmentation(Dolar)" + ";" +
+            "All Links Cost(Dolar)" + ";" +
+            "Max Use Link(MB)" + ";" +
+            "Licences Cost(Dolar)" + ";" +
+            "Slo Cost(Dolar)" + ";" +
+            "Distance(KM)" + ";" +
+            "Hops" + ";" +
+            "Host Size" + ";" +
+            "Number Instances" + ";" +
+            "Throughput(%)" + ";" +
+            "Attend Vnfs(%)" + ";" +
+            "Reject-Link" + ";" +
             "Reject-Node" + "\n";
 
             objectOutputStream.writeObject(header);
 
             for (int i = 0; i < conf.getNumberSolutions(); i++) {
                 String sb = "," +
-                solutions.getEnergyCostList().get(i) + "," +
-                solutions.getBandwidthList().get(i) + "," +
-                solutions.getDelayCostList().get(i) + "," +
-                solutions.getLoadTrafficList().get(i) + "," +
-                solutions.getDeployCostList().get(i) + "," +
-                solutions.getResourcesCostList().get(i) + "," +
-                solutions.getFragmentationList().get(i) + "," +
-                solutions.getAllLinksCostList().get(i) + "," +
-                solutions.getMaxUseLinkList().get(i) + "," +
-                solutions.getLicencesCostList().get(i) + "," +
-                solutions.getSloCostList().get(i) + "," +
-                solutions.getDistanceList().get(i) + "," +
-                solutions.getHopsList().get(i) + "," +
-                solutions.getHostSizeList().get(i) + "," +
-                solutions.getNumberInstancesList().get(i) + "," +
-                solutions.getThroughputList().get(i) + "," +
-                solutions.getAttendVnfs().get(i) + "," +
-                solutions.getRejectLink().get(i) + "," +
+                solutions.getEnergyCostList().get(i) + ";" +
+                solutions.getBandwidthList().get(i) + ";" +
+                solutions.getDelayCostList().get(i) + ";" +
+                solutions.getLoadTrafficList().get(i) + ";" +
+                solutions.getDeployCostList().get(i) + ";" +
+                solutions.getResourcesCostList().get(i) + ";" +
+                solutions.getFragmentationList().get(i) + ";" +
+                solutions.getAllLinksCostList().get(i) + ";" +
+                solutions.getMaxUseLinkList().get(i) + ";" +
+                solutions.getLicencesCostList().get(i) + ";" +
+                solutions.getSloCostList().get(i) + ";" +
+                solutions.getDistanceList().get(i) + ";" +
+                solutions.getHopsList().get(i) + ";" +
+                solutions.getHostSizeList().get(i) + ";" +
+                solutions.getNumberInstancesList().get(i) + ";" +
+                solutions.getThroughputList().get(i) + ";" +
+                solutions.getAttendVnfs().get(i) + ";" +
+                solutions.getRejectLink().get(i) + ";" +
                 solutions.getRejectNode().get(i) + "\n";
 
                 objectOutputStream.writeObject(sb);
