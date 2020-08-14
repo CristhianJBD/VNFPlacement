@@ -1,9 +1,0 @@
-#[Vnf(Id)] [Tipo Vnf cite 187] [Requerimiento Cores cite 187] [Requerimiento RAM(GB)cite 426]
-Firewall A 3 8
-Firewall B 2 4
-IDS A 3 6
-IDS B 4 8
-Proxy A 3 6
-NAT A 3 4
-NAT B 2 5
-DPI A 1 6

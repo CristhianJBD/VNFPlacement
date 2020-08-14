@@ -56,6 +56,8 @@ public class VnfService {
                 int count = 1;
                 logger.info("Tanda: " + i);
                 for (Traffic traffic : traffics) {
+                    traffic.setRejectLink(0);
+                    traffic.setRejectNode(0);
                     graphMultiStage = createGraphtMultiStage(traffic);
                     if (graphMultiStage == null) {
                         traffic.setRejectNode(1);
