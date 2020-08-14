@@ -437,7 +437,7 @@ public class ObjectiveFunctionService {
             fileOutputStream = new FileOutputStream(new File(System.getProperty("app.home") + conf.getSolutionsFileName()));
             objectOutputStream = new ObjectOutputStream(fileOutputStream);
 
-            String header = "" +
+            String header = ";" +
             "Energy Cost(Dolar)" + ";" +
             "Bandwidth(MB)" + ";" +
             "Delay Cost" + ";" +
@@ -461,7 +461,7 @@ public class ObjectiveFunctionService {
             objectOutputStream.writeObject(header);
 
             for (int i = 0; i < conf.getNumberSolutions(); i++) {
-                String sb = "," +
+                String sb = ";" +
                 solutions.getEnergyCostList().get(i) + ";" +
                 solutions.getBandwidthList().get(i) + ";" +
                 solutions.getDelayCostList().get(i) + ";" +
