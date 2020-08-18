@@ -24,6 +24,8 @@ public class Configurations {
     public List<Node> nodes = new ArrayList<>();
 
     //Parametros de Sistema
+    @Value("${network.package}")
+    private String networkPackage;
     @Value("${file.name.links}")
     private String linksFileName;
     @Value("${file.name.nodes}")

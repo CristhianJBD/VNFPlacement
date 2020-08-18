@@ -135,7 +135,8 @@ public class DataService {
         String[] serverSplit;
         logger.info("Servidores: ");
         try {
-            reader = new BufferedReader(new FileReader(System.getProperty("app.home") + conf.getServersFileName()));
+            reader = new BufferedReader(new FileReader(System.getProperty("app.home") +
+                    conf.getNetworkPackage() + conf.getServersFileName()));
 
             reader.readLine();
             while ((serverLine = reader.readLine()) != null) {
@@ -178,7 +179,8 @@ public class DataService {
         String[] splitNode;
         logger.info("Nodos: ");
         try {
-            reader = new BufferedReader(new FileReader(System.getProperty("app.home") + conf.getNodesFileName()));
+            reader = new BufferedReader(new FileReader(System.getProperty("app.home") +
+                    conf.getNetworkPackage() + conf.getNodesFileName()));
 
             reader.readLine();
             while ((nodeString = reader.readLine()) != null) {
@@ -210,7 +212,8 @@ public class DataService {
         BufferedReader reader = null;
         String linkLine;
         try {
-            reader = new BufferedReader(new FileReader(System.getProperty("app.home") + conf.getLinksFileName()));
+            reader = new BufferedReader(new FileReader(System.getProperty("app.home") +
+                    conf.getNetworkPackage() + conf.getLinksFileName()));
 
             reader.readLine();
             linksString = new ArrayList<>();
