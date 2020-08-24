@@ -304,7 +304,7 @@ public class DataService {
             double delayMin = 0;
 
             KShortestPaths<Node, Link> pathInspector =
-                    new KShortestPaths<>(graph, 1, Integer.MAX_VALUE);
+                    new KShortestPaths<>(graph, 3, Integer.MAX_VALUE);
 
             paths = pathInspector.getPaths(nodesMap.get(originId), nodesMap.get(destinyId));
 
@@ -312,7 +312,7 @@ public class DataService {
                 delayMin = delayMin + vnfsShared.get(vnf.getId()).getDelay();
 
             if (paths != null && paths.size() > 0)
-                for (Link link : paths.get(0).getEdgeList())
+                for (Link link : paths.get(2).getEdgeList())
                     delayMin = delayMin + link.getDelay();
 
             return delayMin + (delayMin * (conf.getTrafficDelayMax() / 100));
