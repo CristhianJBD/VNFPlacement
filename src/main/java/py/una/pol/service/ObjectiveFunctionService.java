@@ -369,7 +369,7 @@ public class ObjectiveFunctionService {
                 if (traffic.isProcessed())
                     successful = successful + traffic.getBandwidth();
             }
-            return (successful / total) * 100;
+            return -((successful / total) * 100);
         } catch (Exception e) {
             logger.error("Error al calcular el throughput: " + e.getMessage());
             throw new Exception();
@@ -421,7 +421,7 @@ public class ObjectiveFunctionService {
                 if (traffic.isProcessed())
                     attend = attend + traffic.getSfc().getVnfs().size();
             }
-            return (attend / total) * 100;
+            return -((attend / total) * 100);
         } catch (Exception e) {
             logger.error("Error al calcular la cantidad de vnfs atendidos: " + e.getMessage());
             throw new Exception();
@@ -477,7 +477,7 @@ public class ObjectiveFunctionService {
                 solutions.getHopsList().get(i) + ";" +
                 solutions.getHostSizeList().get(i) + ";" +
                 solutions.getNumberInstancesList().get(i) + ";" +
-                solutions.getThroughputList().get(i) + ";" +
+                (solutions.getThroughputList().get(i)) + ";" +
                 solutions.getAttendVnfs().get(i) + ";" +
                 solutions.getRejectLink().get(i) + ";" +
                 solutions.getRejectNode().get(i) + "\n";
