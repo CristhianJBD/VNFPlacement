@@ -240,7 +240,7 @@ public class VnfService {
                     //la ruta es valida si se llega hasta el nodo destino
                     if (traffic.getNodeDestinyId().equals(randomNodeId)) {
                         if (!isResourceAvailableLink(originNodeId, randomNodeId,
-                                bandwidtCurrent, linksMapAux, nodesMapAux, shortestPath)) {
+                                bandwidtCurrent, linksMapAux, nodesMapAux, shortestPath, traffic)) {
                             break;
                         } else {
                             validPlacement = true;
@@ -390,7 +390,8 @@ public class VnfService {
     }
 
     private boolean isResourceAvailableLink(String nodeOriginId, String nodeDestinyId, double bandwidtCurrent,
-                                            Map<String, Link> linksMapAux, Map<String, Node> nodesMapAux, ShortestPath shortestPath) throws Exception {
+                                            Map<String, Link> linksMapAux, Map<String, Node> nodesMapAux,
+                                            ShortestPath shortestPath, Traffic traffic) throws Exception {
         Link link;
         Node node;
         double bandwidtUsed;
@@ -400,6 +401,7 @@ public class VnfService {
                     link = linksMapAux.get(linkId);
                     bandwidtUsed = link.getBandwidthUsed() + bandwidtCurrent;
                     if (link.getBandwidth() < bandwidtUsed) {
+                        traffic.setRejectLink(traffic.getRejectLink() + 1);
                         return false;
                     } else {
                         link.setBandwidthUsed(bandwidtUsed);
