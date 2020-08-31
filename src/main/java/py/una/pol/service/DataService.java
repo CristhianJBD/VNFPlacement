@@ -312,7 +312,7 @@ public class DataService {
                 delayMin = delayMin + vnfsShared.get(vnf.getId()).getDelay();
 
             if (paths != null && paths.size() > 0)
-                for (Link link : paths.get(2).getEdgeList())
+                for (Link link : paths.get(paths.size()-1).getEdgeList())
                     delayMin = delayMin + link.getDelay();
 
             return delayMin + (delayMin * (conf.getTrafficDelayMax() / 100));

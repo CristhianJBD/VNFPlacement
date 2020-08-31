@@ -1,5 +1,5 @@
 #[Nodo Origen(Id)] [Nodo Destino(Id)] [Delay(ms)] [Distancia(KM)] [Capacidad de ancho de banda(Mb/s) - Cite 470] [Costo por Mbps(Dolar) - Cite 461]
-Vancouver Calgary 47 7650 1109 0.00001437
+Vancouver Calgary 7 680 1109 0.00001437
 Vancouver Seattle 5 235 1103 0.00001125
 LosAngeles SanFrancisco 6 572 1050 0.00001194
 LosAngeles LasVegas 5 352 1070 0.00001225
