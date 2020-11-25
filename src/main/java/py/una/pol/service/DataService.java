@@ -5,7 +5,6 @@ import org.jgrapht.Graph;
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.shortestpath.KShortestPaths;
 import org.jgrapht.graph.SimpleGraph;
-import org.springframework.stereotype.Service;
 import py.una.pol.dto.ShortestPath;
 import py.una.pol.dto.NFVdto.*;
 import py.una.pol.util.Configurations;
@@ -14,24 +13,21 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.*;
 
-@Service()
 public class DataService {
     Logger logger = Logger.getLogger(DataService.class);
 
-    private final Configurations conf;
-
     private List<String> linksString;
-    public final Graph<Node, Link> graph = new SimpleGraph<>(Link.class);
-    public Map<String, List<ShortestPath>> shortestPathMap = new HashMap<>();
+    public static final Graph<Node, Link> graph = new SimpleGraph<>(Link.class);
+    public static Map<String, List<ShortestPath>> shortestPathMap = new HashMap<>();
     public Map<String, Node> nodes = new HashMap<>();
-    public Map<String, Node> nodesMap = new HashMap<>();
-    public Map<String, Link> linksMap = new HashMap<>();
-    public Map<String, VnfShared> vnfsShared = new HashMap<>();
-    public List<Vnf> vnfs = new ArrayList<>();
+    public static Map<String, Node> nodesMap = new HashMap<>();
+    public static Map<String, Link> linksMap = new HashMap<>();
+    public static Map<String, VnfShared> vnfsShared = new HashMap<>();
+    public static List<Vnf> vnfs = new ArrayList<>();
     public Map<String, Server> servers = new HashMap<>();
 
-    public DataService(Configurations conf) {
-        this.conf = conf;
+    public DataService() throws Exception {
+        loadData();
     }
 
     public void loadData() throws Exception {
@@ -60,7 +56,7 @@ public class DataService {
 
         logger.info("VNFs: ");
         try {
-            reader = new BufferedReader(new FileReader(System.getProperty("app.home") + conf.getVnfsShareFileName()));
+            reader = new BufferedReader(new FileReader(System.getProperty("app.home") + Configurations.vnfsShareFileName));
 
             reader.readLine();
             while ((vnfLine = reader.readLine()) != null) {
@@ -99,7 +95,7 @@ public class DataService {
         String[] vnfSplit;
         logger.info("VNFs: ");
         try {
-            reader = new BufferedReader(new FileReader(System.getProperty("app.home") + conf.getVnfsSfcFileName()));
+            reader = new BufferedReader(new FileReader(System.getProperty("app.home") + Configurations.vnfsSfcFileName));
 
             reader.readLine();
             while ((vnfLine = reader.readLine()) != null) {
@@ -136,7 +132,7 @@ public class DataService {
         logger.info("Servidores: ");
         try {
             reader = new BufferedReader(new FileReader(System.getProperty("app.home") +
-                    conf.getNetworkPackage() + conf.getServersFileName()));
+                    Configurations.networkPackage + Configurations.serversFileName));
 
             reader.readLine();
             while ((serverLine = reader.readLine()) != null) {
@@ -180,7 +176,7 @@ public class DataService {
         logger.info("Nodos: ");
         try {
             reader = new BufferedReader(new FileReader(System.getProperty("app.home") +
-                    conf.getNetworkPackage() + conf.getNodesFileName()));
+                    Configurations.networkPackage + Configurations.nodesFileName));
 
             reader.readLine();
             while ((nodeString = reader.readLine()) != null) {
@@ -213,7 +209,7 @@ public class DataService {
         String linkLine;
         try {
             reader = new BufferedReader(new FileReader(System.getProperty("app.home") +
-                    conf.getNetworkPackage() + conf.getLinksFileName()));
+                    Configurations.networkPackage + Configurations.linksFileName));
 
             reader.readLine();
             linksString = new ArrayList<>();
@@ -262,7 +258,7 @@ public class DataService {
     private void kShortestPath() throws Exception {
         try {
             KShortestPaths<Node, Link> pathInspector =
-                    new KShortestPaths<>(graph, conf.getK(), Integer.MAX_VALUE);
+                    new KShortestPaths<>(graph, Configurations.k, Integer.MAX_VALUE);
             List<GraphPath<Node, Link>> paths;
             List<ShortestPath> kShortestPath;
             String nodeString, linkString;
@@ -294,30 +290,6 @@ public class DataService {
 
         } catch (Exception e) {
             logger.error("Error al cargar kShortestPath: " + e.getMessage());
-            throw new Exception();
-        }
-    }
-
-    public double getDelayMax(SFC sfc, String originId, String destinyId) throws Exception {
-        try {
-            List<GraphPath<Node, Link>> paths;
-            double delayMin = 0;
-
-            KShortestPaths<Node, Link> pathInspector =
-                    new KShortestPaths<>(graph, 3, Integer.MAX_VALUE);
-
-            paths = pathInspector.getPaths(nodesMap.get(originId), nodesMap.get(destinyId));
-
-            for (Vnf vnf : sfc.getVnfs())
-                delayMin = delayMin + vnfsShared.get(vnf.getId()).getDelay();
-
-            if (paths != null && paths.size() > 0)
-                for (Link link : paths.get(paths.size()-1).getEdgeList())
-                    delayMin = delayMin + link.getDelay();
-
-            return delayMin + (delayMin * (conf.getTrafficDelayMax() / 100));
-        }catch (Exception e){
-            logger.error("Error al calcular el delay maximo: " + e.getMessage());
             throw new Exception();
         }
     }

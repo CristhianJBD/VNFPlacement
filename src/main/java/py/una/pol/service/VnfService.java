@@ -5,8 +5,8 @@ import org.jgrapht.DirectedGraph;
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
 import org.jgrapht.graph.DefaultDirectedGraph;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+import org.moeaframework.core.Variable;
+import org.moeaframework.core.variable.Permutation;
 import py.una.pol.dto.*;
 import py.una.pol.dto.NFVdto.*;
 import py.una.pol.util.Configurations;
@@ -15,44 +15,33 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 
-@Service
 public class VnfService {
     Logger logger = Logger.getLogger(VnfService.class);
 
-    @Autowired
-    private DataService data;
-    @Autowired
-    private TrafficService trafficService;
-    @Autowired
-    private ObjectiveFunctionService ofs;
-
-    private final Configurations conf;
     private Map<String, List<ShortestPath>> shortestPathMap;
     private DirectedGraph<String, KPath> graphMultiStage;
     private Map<String, Node> nodesMap;
     private Map<String, Link> linksMap;
     private Map<String, VnfShared> vnfSharedMap;
 
-    public VnfService(Configurations conf) {
-        this.conf = conf;
-    }
 
     public boolean placement() {
+        TrafficService trafficService = new TrafficService();
+        ObjectiveFunctionService ofs = new ObjectiveFunctionService();
         ResultPath resultPath;
         List<Traffic> traffics;
         try {
-            data.loadData();
-            shortestPathMap = data.shortestPathMap;
-            vnfSharedMap = data.vnfsShared;
+            shortestPathMap = DataService.shortestPathMap;
+            vnfSharedMap = DataService.vnfsShared;
 
-            if(conf.isTrafficsRandom())
-                traffics = trafficService.generateRandomtraffic(data.nodesMap, data.vnfs);
+            if (Configurations.trafficsRandom)
+                traffics = trafficService.generateRandomtraffic(DataService.nodesMap, DataService.vnfs);
             else
-                traffics = trafficService.generateAllToAlltraffic(data.nodesMap, data.vnfs);
+                traffics = trafficService.generateAllToAlltraffic(DataService.nodesMap, DataService.vnfs);
 
-            for (int i = 1; i <= conf.getNumberSolutions(); i++) {
-                nodesMap = loadNodesMapAux(data.nodesMap);
-                linksMap = loadLinkMapAux(data.linksMap);
+            for (int i = 1; i <= Configurations.numberSolutions; i++) {
+                nodesMap = loadNodesMapAux(DataService.nodesMap);
+                linksMap = loadLinkMapAux(DataService.linksMap);
                 int count = 1;
                 logger.info("Tanda: " + i);
                 for (Traffic traffic : traffics) {
@@ -80,7 +69,7 @@ public class VnfService {
                     }
                     count++;
                 }
-                ofs.solutionFOs(nodesMap, linksMap, traffics, data.vnfsShared);
+                ofs.solutionFOs(nodesMap, linksMap, traffics, DataService.vnfsShared);
             }
             logger.info(ofs.solutions);
             ofs.writeSolutions(ofs.solutions);
@@ -218,7 +207,7 @@ public class VnfService {
         ShortestPath shortestPath;
         Vnf vnf;
         try {
-            while (!validPlacement && retries <= conf.getRetriesSolution()) {
+            while (!validPlacement && retries <= Configurations.retriesSolution) {
                 originNodeId = traffic.getNodeOriginId();
                 bandwidtCurrent = traffic.getBandwidth();
                 nodesMapAux = loadNodesMapAux(this.nodesMap);
@@ -326,7 +315,7 @@ public class VnfService {
                         return false;
                     }
                 }
-            } else{
+            } else {
                 traffic.setRejectNode(traffic.getRejectNode() + 1);
                 return false;
             }
@@ -337,7 +326,7 @@ public class VnfService {
                     if (link.getBandwidth() < bandwidtUsed) {
                         traffic.setRejectLink(traffic.getRejectLink() + 1);
                         return false;
-                    }else {
+                    } else {
                         link.setBandwidthUsed(bandwidtUsed);
                         link.setTrafficAmount(link.getTrafficAmount() + 1);
                     }
@@ -488,6 +477,92 @@ public class VnfService {
             logger.error("Error en updateGraphMap: " + e.getMessage());
             throw new Exception();
         }
+    }
+
+    public SolutionTraffic placementExecute(Traffic traffic) {
+        ObjectiveFunctionService ofs = new ObjectiveFunctionService();
+        ResultPath resultPath;
+        SolutionTraffic solutionTraffic = null;
+        try {
+            // List<Traffic> traffics = TrafficService.traffics;
+
+            shortestPathMap = DataService.shortestPathMap;
+            vnfSharedMap = DataService.vnfsShared;
+            nodesMap = loadNodesMapAux(DataService.nodesMap);
+            linksMap = loadLinkMapAux(DataService.linksMap);
+
+            traffic.setRejectLink(0);
+            traffic.setRejectNode(0);
+            graphMultiStage = createGraphtMultiStage(traffic);
+            if (graphMultiStage == null) {
+                traffic.setRejectNode(1);
+                traffic.setProcessed(false);
+                traffic.setResultPath(null);
+            } else {
+                resultPath = provisionTraffic(traffic);
+                traffic.setResultPath(resultPath);
+                if (resultPath == null)
+                    traffic.setProcessed(false);
+                else
+                    traffic.setProcessed(true);
+            }
+
+            //     solutionTraffic = ofs.solutionTrafficFOs(nodesMap, linksMap, traffics, DataService.vnfsShared);
+            //      logger.info(solutionTraffic);
+            return solutionTraffic;
+        } catch (Exception e) {
+            logger.error("Error VNF placement: " + e.getMessage());
+        }
+        return null;
+    }
+
+    public SolutionTraffic placement(List<Traffic> traffics, Permutation permutation) {
+        ObjectiveFunctionService ofs = new ObjectiveFunctionService();
+        ResultPath resultPath;
+        SolutionTraffic solutionTraffic;
+        Traffic traffic;
+        try {
+            shortestPathMap = DataService.shortestPathMap;
+            vnfSharedMap = DataService.vnfsShared;
+            nodesMap = loadNodesMapAux(DataService.nodesMap);
+            linksMap = loadLinkMapAux(DataService.linksMap);
+
+            int count = 1;
+            for (int i = 0; i<permutation.size(); i++) {
+                traffic = traffics.get(permutation.get(i));
+                traffic.setRejectLink(0);
+                traffic.setRejectNode(0);
+                graphMultiStage = createGraphtMultiStage(traffic);
+                if (graphMultiStage == null) {
+                    traffic.setRejectNode(1);
+                    traffic.setProcessed(false);
+                    traffic.setResultPath(null);
+                    logger.warn(count + "- No Grafo Multi-Estados: " +
+                            "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
+                } else {
+                    resultPath = provisionTraffic(traffic);
+                    traffic.setResultPath(resultPath);
+                    if (resultPath == null) {
+                        traffic.setProcessed(false);
+                        logger.warn(count + "- No Solucion: " +
+                                "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
+                    } else {
+                        traffic.setProcessed(true);
+                        logger.info(count + "- Solucion: " +
+                                "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
+                    }
+                }
+                count++;
+            }
+            solutionTraffic = ofs.solutionTrafficFOs(nodesMap, linksMap, traffics, DataService.vnfsShared);
+
+            //  logger.info(ofs.solutions);
+            // ofs.writeSolutions(ofs.solutions);
+            return solutionTraffic;
+        } catch (Exception e) {
+            logger.error("Error VNF placement: " + e.getMessage());
+        }
+        return null;
     }
 }
 

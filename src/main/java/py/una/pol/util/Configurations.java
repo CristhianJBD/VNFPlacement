@@ -1,82 +1,94 @@
 package py.una.pol.util;
 
-import lombok.Data;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
 import org.apache.log4j.Logger;
-import py.una.pol.dto.NFVdto.Node;
-import py.una.pol.dto.NFVdto.Server;
-import py.una.pol.dto.NFVdto.VnfShared;
-
-import java.util.ArrayList;
-import java.util.List;
 
 
-@Configuration
-@PropertySource("file:${app.home}/vnf_placement.properties")
-@Data
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
+
 public class Configurations {
     Logger logger = Logger.getLogger(Configurations.class);
 
-    public List<VnfShared> vnfs = new ArrayList<>();
-    public List<Server> servers = new ArrayList<>();
-    public List<Node> nodes = new ArrayList<>();
-
     //Parametros de Sistema
-    @Value("${network.package}")
-    private String networkPackage;
-    @Value("${file.name.links}")
-    private String linksFileName;
-    @Value("${file.name.nodes}")
-    private String nodesFileName;
-    @Value("${file.name.servers}")
-    private String serversFileName;
-    @Value("${file.name.vnfs.sfc}")
-    private String vnfsSfcFileName;
-    @Value("${file.name.vnfs.share}")
-    private String vnfsShareFileName;
-    @Value("${file.name.traffics}")
-    private String trafficsFileName;
-    @Value("${file.name.solutions}")
-    private String solutionsFileName;
-    @Value("${number.solution}")
-    private Integer numberSolutions;
-    @Value("${number.traffic}")
-    private Integer numberTraffic;
-    @Value("${k.shortest}")
-    private Integer k;
-    @Value("${retries.solution}")
-    private Integer retriesSolution;
+    public static String networkPackage;
+    public static String linksFileName;
+    public static String nodesFileName;
+    public static String serversFileName;
+    public static String vnfsSfcFileName;
+    public static String vnfsShareFileName;
+    public static String trafficsFileName;
+    public static String solutionsFileName;
+    public static Integer numberSolutions;
+    public static Integer numberTraffic;
+    public static Integer k;
+    public static Integer retriesSolution;
 
-    @Value("${server.penalty.cpu.cost}")
-    private double serverPenaltyCPUCost;
-    @Value("${server.penalty.ram.cost}")
-    private double serverPenaltyRAMCost;
-    @Value("${server.penalty.storage.cost}")
-    private double serverPenaltyStorageCost;
-    @Value("${link.penalty.bandwidth.cost}")
-    private double linkPenaltyBandwidthCost;
+    public static double serverPenaltyCPUCost;
+    public static double serverPenaltyRAMCost;
+    public static double serverPenaltyStorageCost;
+    public static double linkPenaltyBandwidthCost;
 
     //Trafico
-    @Value("${traffics.read.file}")
-    private boolean trafficsReadFile;
-    @Value("${traffics.random}")
-    private boolean trafficsRandom;
-    @Value("${traffic.bandwidth.min}")
-    private int trafficBandwidthMin;
-    @Value("${traffic.bandwidth.max}")
-    private int trafficBandwidthMax;
-    @Value("${traffic.percentage.delay.max}")
-    private double trafficDelayMax;
-    @Value("${traffic.penalty.slo.min}")
-    private int trafficPenaltySloMin;
-    @Value("${traffic.penalty.slo.max}")
-    private int trafficPenaltySloMax;
-    @Value("${traffic.sfc.min}")
-    private int trafficSfcMin;
-    @Value("${traffic.sfc.max}")
-    private int trafficSfcMax;
+    public static boolean trafficsReadFile;
+    public static boolean trafficsRandom;
+    public static int trafficBandwidthMin;
+    public static int trafficBandwidthMax;
+    public static double trafficDelayMax;
+    public static int trafficPenaltySloMin;
+    public static int trafficPenaltySloMax;
+    public static int trafficSfcMin;
+    public static int trafficSfcMax;
+
+    public Configurations() throws Exception {
+        loadProperties();
+    }
+
+    public void loadProperties() throws Exception {
+        try (InputStream input = new FileInputStream(System.getProperty("app.home") + "/vnf_placement.properties")) {
+
+            Properties prop = new Properties();
+
+            prop.load(input);
+
+            //Parametros de Sistema
+            networkPackage = prop.getProperty("network.package");
+            linksFileName = prop.getProperty("file.name.links");
+            nodesFileName = prop.getProperty("file.name.nodes");
+            serversFileName = prop.getProperty("file.name.servers");
+            vnfsSfcFileName = prop.getProperty("file.name.vnfs.sfc");
+            vnfsShareFileName = prop.getProperty("file.name.vnfs.share");
+            trafficsFileName = prop.getProperty("file.name.traffics");
+            solutionsFileName = prop.getProperty("file.name.solution");
+            numberSolutions = Integer.valueOf(prop.getProperty("number.solution"));
+            numberTraffic = Integer.valueOf(prop.getProperty("number.traffic"));
+            k = Integer.valueOf(prop.getProperty("k.shortest"));
+            retriesSolution = Integer.valueOf(prop.getProperty("retries.solution"));
+
+            serverPenaltyCPUCost = Double.parseDouble(prop.getProperty("server.penalty.cpu.cost"));
+            serverPenaltyRAMCost = Double.parseDouble(prop.getProperty("server.penalty.ram.cost"));
+            serverPenaltyStorageCost = Double.parseDouble(prop.getProperty("server.penalty.storage.cost"));
+            linkPenaltyBandwidthCost = Double.parseDouble(prop.getProperty("link.penalty.bandwidth.cost"));
+
+            //Trafico
+            trafficsReadFile = Boolean.parseBoolean(prop.getProperty("traffics.read.file"));
+            trafficsRandom = Boolean.parseBoolean(prop.getProperty("traffics.random"));
+            trafficBandwidthMin = Integer.parseInt(prop.getProperty("traffic.bandwidth.min"));
+            trafficBandwidthMax = Integer.parseInt(prop.getProperty("traffic.bandwidth.max"));
+            trafficDelayMax = Double.parseDouble(prop.getProperty("traffic.percentage.delay.max"));
+            trafficPenaltySloMin = Integer.parseInt(prop.getProperty("traffic.penalty.slo.min"));
+            trafficPenaltySloMax = Integer.parseInt(prop.getProperty("traffic.penalty.slo.max"));
+            trafficSfcMin = Integer.parseInt(prop.getProperty("traffic.sfc.min"));
+            trafficSfcMax = Integer.parseInt(prop.getProperty("traffic.sfc.max"));
+
+        } catch (IOException ex) {
+            logger.error("Error al cargar los datos del properties:" + ex.getMessage());
+            throw new Exception();
+        }
+    }
+
+
 
 
 }

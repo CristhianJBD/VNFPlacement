@@ -1,9 +1,9 @@
 package py.una.pol.service;
 
 import org.apache.log4j.Logger;
-import org.springframework.stereotype.Service;
 import py.una.pol.dto.NFVdto.*;
 import py.una.pol.dto.Path;
+import py.una.pol.dto.SolutionTraffic;
 import py.una.pol.dto.Solutions;
 import py.una.pol.util.Configurations;
 
@@ -18,17 +18,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@Service
+
 public class ObjectiveFunctionService {
     Logger logger = Logger.getLogger(ObjectiveFunctionService.class);
 
-    private final Configurations conf;
-
     Solutions solutions = new Solutions();
-
-    public ObjectiveFunctionService(Configurations configuration) {
-        this.conf = configuration;
-    }
 
     public void solutionFOs(Map<String, Node> nodesMap, Map<String, Link> linksMap,
                                  List<Traffic> traffics, Map<String, VnfShared> vnfsShared) throws Exception {
@@ -156,7 +150,7 @@ public class ObjectiveFunctionService {
 
             return deployCost;
         } catch (Exception e) {
-            logger.error("Error al calcular el costo de Intalacion o configuracion de los VNFs: " + e.getMessage());
+            logger.error("Error al calcular el costo de Intalacion o Configurationsiguracion de los VNFs: " + e.getMessage());
             throw new Exception();
         }
     }
@@ -243,19 +237,19 @@ public class ObjectiveFunctionService {
             for (Server server : servers) {
                 fragmentation = fragmentation +
                         (server.getResourceCPU() - server.getResourceCPUUsed()) *
-                                conf.getServerPenaltyCPUCost();
+                                Configurations.serverPenaltyCPUCost;
                 fragmentation = fragmentation +
                         (server.getResourceRAM() - server.getResourceRAMUsed()) *
-                                conf.getServerPenaltyRAMCost();
+                                Configurations.serverPenaltyRAMCost;
                 fragmentation = fragmentation +
                         (server.getResourceStorage() - server.getResourceStorageUsed()) *
-                                conf.getServerPenaltyStorageCost();
+                                Configurations.serverPenaltyStorageCost;
             }
 
             //Costo de multa por el ancho banda que sobra de la capacidad total de cada enlace
             for (Link link : links)
                 fragmentation = fragmentation +
-                        (link.getBandwidth() - link.getBandwidthUsed()) * conf.getLinkPenaltyBandwidthCost();
+                        (link.getBandwidth() - link.getBandwidthUsed()) * Configurations.linkPenaltyBandwidthCost;
 
             return fragmentation;
         } catch (Exception e) {
@@ -434,7 +428,7 @@ public class ObjectiveFunctionService {
         FileOutputStream fileOutputStream = null;
         ObjectOutputStream objectOutputStream = null;
         try {
-            fileOutputStream = new FileOutputStream(new File(System.getProperty("app.home") + conf.getSolutionsFileName()));
+            fileOutputStream = new FileOutputStream(new File(System.getProperty("app.home") + Configurations.solutionsFileName));
             objectOutputStream = new ObjectOutputStream(fileOutputStream);
 
             String header = ";" +
@@ -460,7 +454,7 @@ public class ObjectiveFunctionService {
 
             objectOutputStream.writeObject(header);
 
-            for (int i = 0; i < conf.getNumberSolutions(); i++) {
+            for (int i = 0; i < Configurations.numberSolutions; i++) {
                 String sb = ";" +
                 solutions.getEnergyCostList().get(i) + ";" +
                 solutions.getBandwidthList().get(i) + ";" +
@@ -493,6 +487,35 @@ public class ObjectiveFunctionService {
             if (fileOutputStream != null)
                 fileOutputStream.close();
         }
+    }
+
+
+    public SolutionTraffic solutionTrafficFOs(Map<String, Node> nodesMap, Map<String, Link> linksMap,
+                                       List<Traffic> traffics, Map<String, VnfShared> vnfsShared) throws Exception {
+        List<Server> servers = new ArrayList<>();
+        SolutionTraffic solutionTraffic = new SolutionTraffic();
+
+        List<Node> nodes = new ArrayList<>(nodesMap.values());
+        List<Link> links = new ArrayList<>(linksMap.values());
+
+        for(Node node : nodes)
+            if(node.getServer()!=null && node.getServer().getVnfs().size() > 0)
+                servers.add(node.getServer());
+
+        solutionTraffic.setEnergyCost(calculateEnergyCost(nodes));
+        solutionTraffic.setSloCost(calculateSLOCost(linksMap, traffics, vnfsShared));
+        solutionTraffic.setDelayCost(calculateDelayTotal(servers, links));
+        solutionTraffic.setDistance(calculateDistance(links));
+        solutionTraffic.setBandwidth(calculateBandwidth(links));
+        solutionTraffic.setNumberInstances(calculateNumberIntances(servers));
+        solutionTraffic.setLoadTraffic(calculateLoadTraffic(linksMap,traffics,vnfsShared));
+        solutionTraffic.setResourcesCost(calculateResources(servers));
+        solutionTraffic.setLicencesCost(calculateLicencesCost(servers));
+        solutionTraffic.setFragmentation(calculateResourceFragmentation(servers, links));
+        solutionTraffic.setMaxUseLink(calculateMaximunUseLink(links));
+        solutionTraffic.setThroughput(calculateThroughput(traffics));
+
+        return solutionTraffic;
     }
 
 
