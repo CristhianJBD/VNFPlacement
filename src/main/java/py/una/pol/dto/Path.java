@@ -17,4 +17,9 @@ public class Path implements Serializable {
         this.id = id;
         this.shortestPath = shortestPath;
     }
+
+    public Path(String origin, String destiny, ShortestPath shortestPath) {
+        this.id = origin + "-" + destiny;
+        this.shortestPath = shortestPath;
+    }
 }

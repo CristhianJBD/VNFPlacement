@@ -1,6 +1,7 @@
 package py.una.pol.service;
 
 import org.apache.log4j.Logger;
+import py.una.pol.dto.Cost;
 import py.una.pol.dto.NFVdto.*;
 import py.una.pol.dto.Path;
 import py.una.pol.dto.SolutionTraffic;
@@ -516,6 +517,30 @@ public class ObjectiveFunctionService {
         solutionTraffic.setThroughput(calculateThroughput(traffics));
 
         return solutionTraffic;
+    }
+
+    public Cost costTotalFOs(Map<String, Node> nodesMap, Map<String, Link> linksMap) throws Exception {
+        Cost cost = new Cost();
+        List<Server> servers = new ArrayList<>();
+
+        List<Node> nodes = new ArrayList<>(nodesMap.values());
+        List<Link> links = new ArrayList<>(linksMap.values());
+
+        for(Node node : nodes)
+            if(node.getServer()!=null && node.getServer().getVnfs().size() > 0)
+                servers.add(node.getServer());
+
+        cost.setEnergy(calculateEnergyCost(nodes));
+        cost.setDelay(calculateDelayTotal(servers, links));
+        cost.setDistance(calculateDistance(links));
+        cost.setBandwidth(calculateBandwidth(links));
+        cost.setNumberInstances(calculateNumberIntances(servers));
+        cost.setResources(calculateResources(servers));
+        cost.setLicences(calculateLicencesCost(servers));
+        cost.setFragmentation(calculateResourceFragmentation(servers, links));
+        cost.setMaximunUseLink(calculateMaximunUseLink(links));
+
+        return cost;
     }
 
 

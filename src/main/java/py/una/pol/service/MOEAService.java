@@ -4,6 +4,7 @@ import org.apache.log4j.Logger;
 import org.moeaframework.Executor;
 import org.moeaframework.core.NondominatedPopulation;
 import org.moeaframework.core.Solution;
+import org.moeaframework.core.operator.TournamentSelection;
 import py.una.pol.util.Configurations;
 
 public class MOEAService {
@@ -14,6 +15,10 @@ public class MOEAService {
             Configurations configurations = new Configurations();
             TrafficService trafficService = new TrafficService();
             DataService data = new DataService();
+
+            TournamentSelection tournamentSelection = new TournamentSelection();
+
+
 
             NondominatedPopulation result = new Executor()
                     .withProblemClass(ProblemService.class)

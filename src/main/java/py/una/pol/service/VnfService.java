@@ -4,8 +4,8 @@ import org.apache.log4j.Logger;
 import org.jgrapht.DirectedGraph;
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
+import org.jgrapht.alg.shortestpath.KShortestPaths;
 import org.jgrapht.graph.DefaultDirectedGraph;
-import org.moeaframework.core.Variable;
 import org.moeaframework.core.variable.Permutation;
 import py.una.pol.dto.*;
 import py.una.pol.dto.NFVdto.*;
@@ -55,7 +55,7 @@ public class VnfService {
                         logger.warn(count + "- No Grafo Multi-Estados: " +
                                 "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
                     } else {
-                        resultPath = provisionTraffic(traffic);
+                        resultPath = provisionTrafficRandom(traffic);
                         traffic.setResultPath(resultPath);
                         if (resultPath == null) {
                             traffic.setProcessed(false);
@@ -192,7 +192,7 @@ public class VnfService {
         }
     }
 
-    private ResultPath provisionTraffic(Traffic traffic) throws Exception {
+    private ResultPath provisionTrafficRandom(Traffic traffic) throws Exception {
         ResultPath resultPath = new ResultPath();
         String randomNodeId, originNodeId;
         Random rn = new Random();
@@ -479,43 +479,6 @@ public class VnfService {
         }
     }
 
-    public SolutionTraffic placementExecute(Traffic traffic) {
-        ObjectiveFunctionService ofs = new ObjectiveFunctionService();
-        ResultPath resultPath;
-        SolutionTraffic solutionTraffic = null;
-        try {
-            // List<Traffic> traffics = TrafficService.traffics;
-
-            shortestPathMap = DataService.shortestPathMap;
-            vnfSharedMap = DataService.vnfsShared;
-            nodesMap = loadNodesMapAux(DataService.nodesMap);
-            linksMap = loadLinkMapAux(DataService.linksMap);
-
-            traffic.setRejectLink(0);
-            traffic.setRejectNode(0);
-            graphMultiStage = createGraphtMultiStage(traffic);
-            if (graphMultiStage == null) {
-                traffic.setRejectNode(1);
-                traffic.setProcessed(false);
-                traffic.setResultPath(null);
-            } else {
-                resultPath = provisionTraffic(traffic);
-                traffic.setResultPath(resultPath);
-                if (resultPath == null)
-                    traffic.setProcessed(false);
-                else
-                    traffic.setProcessed(true);
-            }
-
-            //     solutionTraffic = ofs.solutionTrafficFOs(nodesMap, linksMap, traffics, DataService.vnfsShared);
-            //      logger.info(solutionTraffic);
-            return solutionTraffic;
-        } catch (Exception e) {
-            logger.error("Error VNF placement: " + e.getMessage());
-        }
-        return null;
-    }
-
     public SolutionTraffic placement(List<Traffic> traffics, Permutation permutation) {
         ObjectiveFunctionService ofs = new ObjectiveFunctionService();
         ResultPath resultPath;
@@ -528,7 +491,7 @@ public class VnfService {
             linksMap = loadLinkMapAux(DataService.linksMap);
 
             int count = 1;
-            for (int i = 0; i<permutation.size(); i++) {
+            for (int i = 0; i < permutation.size(); i++) {
                 traffic = traffics.get(permutation.get(i));
                 traffic.setRejectLink(0);
                 traffic.setRejectNode(0);
@@ -564,5 +527,256 @@ public class VnfService {
         }
         return null;
     }
+
+
+    private ResultPath provisionTraffic(Traffic traffic) throws Exception {
+        ResultPath resultPath = new ResultPath();
+        String originNodeId, destinyNodeId;
+        Map<String, Node> nodesMapAux = null;
+        Map<String, Link> linksMapAux = null;
+        Map<Integer, List<Cost>> costsMap = new HashMap<>();
+        List<Path> pathNodeIds = null;
+        List<String> serverVnf = null;
+        List<Cost> costs;
+        double bandwidtCurrent;
+        boolean validPlacement = false;
+        int retries = 0, indexVnf;
+        ShortestPath shortestPath;
+        Vnf vnf;
+        boolean back = false;
+        try {
+            while (!validPlacement && retries <= Configurations.retriesSolution) {
+                originNodeId = traffic.getNodeOriginId();
+                bandwidtCurrent = traffic.getBandwidth();
+                nodesMapAux = loadNodesMapAux(this.nodesMap);
+                linksMapAux = loadLinkMapAux(this.linksMap);
+                pathNodeIds = new ArrayList<>();
+                serverVnf = new ArrayList<>();
+
+                retries = retries + 1;
+                indexVnf = 0;
+                while (!validPlacement) {  //Hasta completar una ruta
+                    vnf = traffic.getSfc().getVnfs().get(indexVnf);
+
+                    if(!back) {
+                        //Normaliza los costos y guarda en un atributo
+                        costs = normalizeCosts(vnf, originNodeId, bandwidtCurrent);
+
+                        costsMap.put(indexVnf, costs);
+                    }else
+                        costs = costsMap.get(indexVnf);
+
+                    //Se obtiene el manor valor normalizado para el siguiente nodo
+                   Cost destinyCosts = costs.stream().filter(Cost::isFree)
+                            .min(Comparator.comparing(Cost::getCostNormalized))
+                            .orElseThrow(NoSuchElementException::new);
+
+                   if(destinyCosts == null){
+                       back = true;
+                       indexVnf = indexVnf - 1;
+                       //Todo setear a todos isFree true de la etapa
+                   }else {
+                       destinyNodeId = destinyCosts.getId();
+                       shortestPath = destinyCosts.getShortestPath();
+
+                       //la ruta es valida si se llega hasta el nodo destino
+                       if (traffic.getNodeDestinyId().equals(destinyNodeId)) {
+                           if (!isResourceAvailableLink(originNodeId, destinyNodeId,
+                                   bandwidtCurrent, linksMapAux, nodesMapAux, shortestPath, traffic)) {
+                               destinyCosts.setFree(false);
+                               break;
+                           } else {
+                               validPlacement = true;
+                               pathNodeIds.add(new Path(originNodeId, destinyNodeId, shortestPath));
+                           }
+                       } else {
+
+                           if (!isResourceAvailableGraph(originNodeId, destinyNodeId, bandwidtCurrent,
+                                   vnf, nodesMapAux, linksMapAux, shortestPath, serverVnf, traffic)){
+                               destinyCosts.setFree(false);
+                               break;
+                           }
+                           else {
+                               bandwidtCurrent = vnfSharedMap.get(vnf.getId()).getBandwidthFactor() * bandwidtCurrent;
+                               pathNodeIds.add(new Path(originNodeId, destinyNodeId, shortestPath));
+                               originNodeId = destinyNodeId;
+                               indexVnf = indexVnf + 1;
+                           }
+                       }
+                   }
+
+                }
+            }
+            if (validPlacement) {
+                updateGraphMap(nodesMapAux, linksMapAux);
+                resultPath.setPaths(pathNodeIds);
+                resultPath.setServerVnf(serverVnf);
+                return resultPath;
+            } else
+                return null;
+        } catch (Exception e) {
+            logger.error("Error en el provisionTraffic:" + e.getMessage());
+            throw new Exception();
+        }
+    }
+
+    private boolean
+
+    // Calcula el costo de todas las funciones objetivos al instalar un VNF
+    private Cost calculateCosts(Vnf vnf, ShortestPath shortestPath, double bandwidtCurrent) throws Exception {
+        ObjectiveFunctionService ofs = new ObjectiveFunctionService();
+
+        Map<String, Node> nodesMapAux = loadNodesMapAux(this.nodesMap);
+        Map<String, Link> linksMapAux = loadLinkMapAux(this.linksMap);
+
+        isResourceAvailableGraph(vnf, nodesMapAux, linksMapAux, shortestPath, bandwidtCurrent);
+
+        return ofs.costTotalFOs(nodesMapAux, linksMapAux);
+    }
+
+
+    private boolean isResourceAvailableGraph(Vnf vnf, Map<String, Node> nodesMapAux, Map<String, Link> linksMapAux,
+                                             ShortestPath shortestPath, double bandwidtCurrent) throws Exception {
+        VnfShared vnfToInstall;
+        List<VnfShared> vnfsShared;
+        double bandwidtUsed;
+        Link link;
+        try {
+            String nodeOriginId = shortestPath.getNodes().get(0);
+            String nodeDestinyId = shortestPath.getNodes().get(shortestPath.getNodes().size() - 1);
+            Node node = nodesMapAux.get(nodeDestinyId);
+            Server server = node.getServer();
+            if (server != null) {
+                //Vnf a instalar en el servidor por primera vez
+                vnfToInstall = installVNF(server, vnf);
+                if (vnfToInstall != null) {
+                    vnfsShared = new ArrayList<>();
+                    vnfsShared.add(vnfToInstall);
+                    server.getVnfs().put(vnf.getId(), vnfsShared);
+                } else {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+            if (!nodeDestinyId.equals(nodeOriginId)) {
+                for (String linkId : shortestPath.getLinks()) {
+                    link = linksMapAux.get(linkId);
+                    bandwidtUsed = link.getBandwidthUsed() + bandwidtCurrent;
+                    if (link.getBandwidth() < bandwidtUsed) {
+                        return false;
+                    } else {
+                        link.setBandwidthUsed(bandwidtUsed);
+                        link.setTrafficAmount(link.getTrafficAmount() + 1);
+                    }
+                }
+                if (shortestPath.getLinks().size() != 0) {
+                    for (int i = 0; i < shortestPath.getNodes().size() - 1; i++) {
+                        node = nodesMapAux.get(shortestPath.getNodes().get(i));
+                        node.setTrafficAmount(node.getTrafficAmount() + 1);
+                    }
+                }
+            }
+            return true;
+        } catch (Exception e) {
+            logger.error("Error en IsResourceAvailableGraph: " + e.getMessage());
+            throw new Exception();
+        }
+    }
+
+    private List<Cost> normalizeCosts(Vnf vnf,
+                                String originNodeId, double bandwidtCurrent) throws Exception {
+        Set<KPath> links = graphMultiStage.outgoingEdgesOf(originNodeId);
+        String destinyNodeId;
+        ShortestPath shortestPath;
+        List<ShortestPath> kShortestPath;
+        List<Cost> costs = new ArrayList<>();
+        Cost newCost;
+        for (KPath kPath : links) {
+            destinyNodeId = graphMultiStage.getEdgeTarget(kPath);
+            kShortestPath = kPath.getKShortestPath();
+            for(int k = 0 ; k< kShortestPath.size() ; k++) {
+                shortestPath = kShortestPath.get(k);
+
+                newCost = new Cost(calculateCosts(vnf, shortestPath, bandwidtCurrent));
+                newCost.setId(destinyNodeId);
+                newCost.setShortestPath(shortestPath);
+                newCost.setFree(true);
+                costs.add(newCost);
+            }
+        }
+
+        double maxEnergy = costs.stream().mapToDouble(Cost::getEnergy)
+                .max().orElseThrow(NoSuchElementException::new);
+        double minEnergy = costs.stream().mapToDouble(Cost::getEnergy)
+                .min().orElseThrow(NoSuchElementException::new);
+
+        double maxBandwidth = costs.stream().mapToDouble(Cost::getBandwidth)
+                .max().orElseThrow(NoSuchElementException::new);
+        double minBandwidth = costs.stream().mapToDouble(Cost::getBandwidth)
+                .min().orElseThrow(NoSuchElementException::new);
+
+        int maxDelay = costs.stream().mapToInt(Cost::getDelay)
+                .max().orElseThrow(NoSuchElementException::new);
+        int minDelay = costs.stream().mapToInt(Cost::getDelay)
+                .min().orElseThrow(NoSuchElementException::new);
+
+        int maxDistance = costs.stream().mapToInt(Cost::getDistance)
+                .max().orElseThrow(NoSuchElementException::new);
+        int minDistance = costs.stream().mapToInt(Cost::getDistance)
+                .min().orElseThrow(NoSuchElementException::new);
+
+        int maxInstances = costs.stream().mapToInt(Cost::getNumberInstances)
+                .max().orElseThrow(NoSuchElementException::new);
+        int minInstances = costs.stream().mapToInt(Cost::getNumberInstances)
+                .min().orElseThrow(NoSuchElementException::new);
+
+        double maxResources = costs.stream().mapToDouble(Cost::getResources)
+                .max().orElseThrow(NoSuchElementException::new);
+        double minResources = costs.stream().mapToDouble(Cost::getResources)
+                .min().orElseThrow(NoSuchElementException::new);
+
+        double maxLicences = costs.stream().mapToDouble(Cost::getLicences)
+                .max().orElseThrow(NoSuchElementException::new);
+        double minLicences = costs.stream().mapToDouble(Cost::getLicences)
+                .min().orElseThrow(NoSuchElementException::new);
+
+        double maxFragmentation = costs.stream().mapToDouble(Cost::getFragmentation)
+                .max().orElseThrow(NoSuchElementException::new);
+        double minFragmentation = costs.stream().mapToDouble(Cost::getFragmentation)
+                .min().orElseThrow(NoSuchElementException::new);
+
+        double maxMaximunUseLink = costs.stream().mapToDouble(Cost::getMaximunUseLink)
+                .max().orElseThrow(NoSuchElementException::new);
+        double minMaximunUseLink = costs.stream().mapToDouble(Cost::getMaximunUseLink)
+                .min().orElseThrow(NoSuchElementException::new);
+
+        for(Cost cost : costs) {
+            double normalizedEnergy = normalize(cost.getEnergy(), maxEnergy, minEnergy);
+            double normalizedBandwidth = normalize(cost.getBandwidth(), maxBandwidth, minBandwidth);
+            double normalizedDelay = normalize(cost.getDelay(), maxDelay, minDelay);
+            double normalizedDistance = normalize(cost.getDistance(), maxDistance, minDistance);
+            double normalizedInstances = normalize(cost.getNumberInstances(), maxInstances, minInstances);
+            double normalizedResources = normalize(cost.getResources(), maxResources, minResources);
+            double normalizedLicences = normalize(cost.getLicences(), maxLicences, minLicences);
+            double normalizedFragmentation = normalize(cost.getFragmentation(), maxFragmentation, minFragmentation);
+            double normalizedMaximunUseLink = normalize(cost.getMaximunUseLink(), maxMaximunUseLink, minMaximunUseLink);
+
+            double costNormalized = normalizedEnergy + normalizedBandwidth + normalizedDelay +
+                    normalizedDistance + normalizedInstances + normalizedResources + normalizedLicences +
+                    normalizedFragmentation + normalizedMaximunUseLink;
+
+            cost.setCostNormalized(costNormalized / 9);
+        }
+
+        return costs;
+    }
+
+    private double normalize(double x, double max, double min){
+        if(max == min)
+            return 0;
+        return (x - min)/(max - min);
+    }
+
 }
 
