@@ -25,7 +25,7 @@ public class MOEAService {
                     .withAlgorithm("NSGAIII")
                   //  .withMaxEvaluations(1000)
                     .withMaxTime(10000)
-                    .distributeOnAllCores()
+              //      .distributeOnAllCores()
                     .run();
 
             //Configurar algoritmo de seleccion, operador de cruce y mutacion

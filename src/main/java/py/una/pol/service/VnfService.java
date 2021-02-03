@@ -4,7 +4,6 @@ import org.apache.log4j.Logger;
 import org.jgrapht.DirectedGraph;
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
-import org.jgrapht.alg.shortestpath.KShortestPaths;
 import org.jgrapht.graph.DefaultDirectedGraph;
 import org.moeaframework.core.variable.Permutation;
 import py.una.pol.dto.*;
@@ -531,84 +530,21 @@ public class VnfService {
 
     private ResultPath provisionTraffic(Traffic traffic) throws Exception {
         ResultPath resultPath = new ResultPath();
-        String originNodeId, destinyNodeId;
-        Map<String, Node> nodesMapAux = null;
-        Map<String, Link> linksMapAux = null;
-        Map<Integer, List<Cost>> costsMap = new HashMap<>();
-        List<Path> pathNodeIds = null;
-        List<String> serverVnf = null;
-        List<Cost> costs;
+        String originNodeId;
+        List<Path> pathNodeIds = new ArrayList<>();;
+        List<String> serverVnf = new ArrayList<>();;
+
         double bandwidtCurrent;
-        boolean validPlacement = false;
-        int retries = 0, indexVnf;
-        ShortestPath shortestPath;
-        Vnf vnf;
-        boolean back = false;
+        boolean validPlacement;
         try {
-            while (!validPlacement && retries <= Configurations.retriesSolution) {
-                originNodeId = traffic.getNodeOriginId();
-                bandwidtCurrent = traffic.getBandwidth();
-                nodesMapAux = loadNodesMapAux(this.nodesMap);
-                linksMapAux = loadLinkMapAux(this.linksMap);
-                pathNodeIds = new ArrayList<>();
-                serverVnf = new ArrayList<>();
+            Map<String, Node> nodesMapAux = loadNodesMapAux(nodesMap);
+            Map<String, Link> linksMapAux = loadLinkMapAux(linksMap);
+            originNodeId = traffic.getNodeOriginId();
+            bandwidtCurrent = traffic.getBandwidth();
 
-                retries = retries + 1;
-                indexVnf = 0;
-                while (!validPlacement) {  //Hasta completar una ruta
-                    vnf = traffic.getSfc().getVnfs().get(indexVnf);
+            validPlacement = recursion(originNodeId, traffic, bandwidtCurrent, 0, pathNodeIds, serverVnf, nodesMapAux, linksMapAux);
 
-                    if(!back) {
-                        //Normaliza los costos y guarda en un atributo
-                        costs = normalizeCosts(vnf, originNodeId, bandwidtCurrent);
-
-                        costsMap.put(indexVnf, costs);
-                    }else
-                        costs = costsMap.get(indexVnf);
-
-                    //Se obtiene el manor valor normalizado para el siguiente nodo
-                   Cost destinyCosts = costs.stream().filter(Cost::isFree)
-                            .min(Comparator.comparing(Cost::getCostNormalized))
-                            .orElseThrow(NoSuchElementException::new);
-
-                   if(destinyCosts == null){
-                       back = true;
-                       indexVnf = indexVnf - 1;
-                       //Todo setear a todos isFree true de la etapa
-                   }else {
-                       destinyNodeId = destinyCosts.getId();
-                       shortestPath = destinyCosts.getShortestPath();
-
-                       //la ruta es valida si se llega hasta el nodo destino
-                       if (traffic.getNodeDestinyId().equals(destinyNodeId)) {
-                           if (!isResourceAvailableLink(originNodeId, destinyNodeId,
-                                   bandwidtCurrent, linksMapAux, nodesMapAux, shortestPath, traffic)) {
-                               destinyCosts.setFree(false);
-                               break;
-                           } else {
-                               validPlacement = true;
-                               pathNodeIds.add(new Path(originNodeId, destinyNodeId, shortestPath));
-                           }
-                       } else {
-
-                           if (!isResourceAvailableGraph(originNodeId, destinyNodeId, bandwidtCurrent,
-                                   vnf, nodesMapAux, linksMapAux, shortestPath, serverVnf, traffic)){
-                               destinyCosts.setFree(false);
-                               break;
-                           }
-                           else {
-                               bandwidtCurrent = vnfSharedMap.get(vnf.getId()).getBandwidthFactor() * bandwidtCurrent;
-                               pathNodeIds.add(new Path(originNodeId, destinyNodeId, shortestPath));
-                               originNodeId = destinyNodeId;
-                               indexVnf = indexVnf + 1;
-                           }
-                       }
-                   }
-
-                }
-            }
             if (validPlacement) {
-                updateGraphMap(nodesMapAux, linksMapAux);
                 resultPath.setPaths(pathNodeIds);
                 resultPath.setServerVnf(serverVnf);
                 return resultPath;
@@ -620,7 +556,59 @@ public class VnfService {
         }
     }
 
-    private boolean
+    private boolean recursion(String originNodeId, Traffic traffic, double bandwidtCurrent, int indexVnf,
+                              List<Path> pathNodeIds, List<String> serverVnf,
+                              Map<String, Node> nodesMap, Map<String, Link> linksMap) throws Exception {
+        Map<String, Node> nodesMapAux = loadNodesMapAux(nodesMap);
+        Map<String, Link> linksMapAux = loadLinkMapAux(linksMap);
+        ShortestPath shortestPath;
+        List<Cost> costs;
+        String destinyNodeId;
+
+        if (traffic.getSfc().getVnfs().size() == indexVnf) {
+            Set<KPath> links = graphMultiStage.outgoingEdgesOf(originNodeId);
+            destinyNodeId = graphMultiStage.getEdgeTarget(links.iterator().next());
+
+            if (traffic.getNodeDestinyId().equals(destinyNodeId)) {
+                for(ShortestPath shortestPathLast : links.iterator().next().getKShortestPath()) {
+                    if (isResourceAvailableLink(originNodeId, destinyNodeId,
+                            bandwidtCurrent, linksMapAux, nodesMapAux, shortestPathLast, traffic)) {
+                        pathNodeIds.add(new Path(originNodeId, destinyNodeId, shortestPathLast));
+                        updateGraphMap(nodesMapAux, linksMapAux);
+                        return true;
+                    } else
+                        linksMapAux = loadLinkMapAux(linksMap);
+                }
+                return false;
+            }
+        }
+        Vnf vnf = traffic.getSfc().getVnfs().get(indexVnf);
+        //Normaliza los costos y guarda en un atributo
+        costs = normalizeCosts(vnf, originNodeId, bandwidtCurrent);
+
+        //Se ordena de acuerdo al valor normalizado
+        costs = costs.stream().sorted(Comparator.comparing(Cost::getCostNormalized)).collect(Collectors.toList());
+
+        for (Cost destinyCosts : costs) {
+            destinyNodeId = destinyCosts.getId();
+            shortestPath = destinyCosts.getShortestPath();
+
+            if (isResourceAvailableGraph(originNodeId, destinyNodeId, bandwidtCurrent,
+                    vnf, nodesMapAux, linksMapAux, shortestPath, serverVnf, traffic)) {
+                bandwidtCurrent = vnfSharedMap.get(vnf.getId()).getBandwidthFactor() * bandwidtCurrent;
+                originNodeId = destinyNodeId;
+
+                if (recursion(originNodeId, traffic, bandwidtCurrent, indexVnf + 1, pathNodeIds, serverVnf, nodesMapAux, linksMapAux)) {
+                    pathNodeIds.add(new Path(originNodeId, destinyNodeId, shortestPath));
+                    return true;
+                }
+            }
+            serverVnf.remove(indexVnf - 1);
+            nodesMapAux = loadNodesMapAux(nodesMap);
+            linksMapAux = loadLinkMapAux(linksMap);
+        }
+        return false;
+    }
 
     // Calcula el costo de todas las funciones objetivos al instalar un VNF
     private Cost calculateCosts(Vnf vnf, ShortestPath shortestPath, double bandwidtCurrent) throws Exception {
@@ -629,11 +617,13 @@ public class VnfService {
         Map<String, Node> nodesMapAux = loadNodesMapAux(this.nodesMap);
         Map<String, Link> linksMapAux = loadLinkMapAux(this.linksMap);
 
-        isResourceAvailableGraph(vnf, nodesMapAux, linksMapAux, shortestPath, bandwidtCurrent);
+        boolean result = isResourceAvailableGraph(vnf, nodesMapAux, linksMapAux, shortestPath, bandwidtCurrent);
 
-        return ofs.costTotalFOs(nodesMapAux, linksMapAux);
+        if(result)
+            return ofs.costTotalFOs(nodesMapAux, linksMapAux);
+        else
+            return null;
     }
-
 
     private boolean isResourceAvailableGraph(Vnf vnf, Map<String, Node> nodesMapAux, Map<String, Link> linksMapAux,
                                              ShortestPath shortestPath, double bandwidtCurrent) throws Exception {
@@ -685,7 +675,7 @@ public class VnfService {
     }
 
     private List<Cost> normalizeCosts(Vnf vnf,
-                                String originNodeId, double bandwidtCurrent) throws Exception {
+                                      String originNodeId, double bandwidtCurrent) throws Exception {
         Set<KPath> links = graphMultiStage.outgoingEdgesOf(originNodeId);
         String destinyNodeId;
         ShortestPath shortestPath;
@@ -695,87 +685,90 @@ public class VnfService {
         for (KPath kPath : links) {
             destinyNodeId = graphMultiStage.getEdgeTarget(kPath);
             kShortestPath = kPath.getKShortestPath();
-            for(int k = 0 ; k< kShortestPath.size() ; k++) {
+            for (int k = 0; k < kShortestPath.size(); k++) {
                 shortestPath = kShortestPath.get(k);
-
-                newCost = new Cost(calculateCosts(vnf, shortestPath, bandwidtCurrent));
-                newCost.setId(destinyNodeId);
-                newCost.setShortestPath(shortestPath);
-                newCost.setFree(true);
-                costs.add(newCost);
+                Cost resultCost = calculateCosts(vnf, shortestPath, bandwidtCurrent);
+                if(resultCost != null) {
+                    newCost = new Cost();
+                    newCost.setId(destinyNodeId);
+                    newCost.setShortestPath(shortestPath);
+                    costs.add(newCost);
+                }
             }
         }
 
-        double maxEnergy = costs.stream().mapToDouble(Cost::getEnergy)
-                .max().orElseThrow(NoSuchElementException::new);
-        double minEnergy = costs.stream().mapToDouble(Cost::getEnergy)
-                .min().orElseThrow(NoSuchElementException::new);
+        if(costs.size() > 0) {
+            double maxEnergy = costs.stream().mapToDouble(Cost::getEnergy)
+                    .max().orElseThrow(NoSuchElementException::new);
+            double minEnergy = costs.stream().mapToDouble(Cost::getEnergy)
+                    .min().orElseThrow(NoSuchElementException::new);
 
-        double maxBandwidth = costs.stream().mapToDouble(Cost::getBandwidth)
-                .max().orElseThrow(NoSuchElementException::new);
-        double minBandwidth = costs.stream().mapToDouble(Cost::getBandwidth)
-                .min().orElseThrow(NoSuchElementException::new);
+            double maxBandwidth = costs.stream().mapToDouble(Cost::getBandwidth)
+                    .max().orElseThrow(NoSuchElementException::new);
+            double minBandwidth = costs.stream().mapToDouble(Cost::getBandwidth)
+                    .min().orElseThrow(NoSuchElementException::new);
 
-        int maxDelay = costs.stream().mapToInt(Cost::getDelay)
-                .max().orElseThrow(NoSuchElementException::new);
-        int minDelay = costs.stream().mapToInt(Cost::getDelay)
-                .min().orElseThrow(NoSuchElementException::new);
+            int maxDelay = costs.stream().mapToInt(Cost::getDelay)
+                    .max().orElseThrow(NoSuchElementException::new);
+            int minDelay = costs.stream().mapToInt(Cost::getDelay)
+                    .min().orElseThrow(NoSuchElementException::new);
 
-        int maxDistance = costs.stream().mapToInt(Cost::getDistance)
-                .max().orElseThrow(NoSuchElementException::new);
-        int minDistance = costs.stream().mapToInt(Cost::getDistance)
-                .min().orElseThrow(NoSuchElementException::new);
+            int maxDistance = costs.stream().mapToInt(Cost::getDistance)
+                    .max().orElseThrow(NoSuchElementException::new);
+            int minDistance = costs.stream().mapToInt(Cost::getDistance)
+                    .min().orElseThrow(NoSuchElementException::new);
 
-        int maxInstances = costs.stream().mapToInt(Cost::getNumberInstances)
-                .max().orElseThrow(NoSuchElementException::new);
-        int minInstances = costs.stream().mapToInt(Cost::getNumberInstances)
-                .min().orElseThrow(NoSuchElementException::new);
+            int maxInstances = costs.stream().mapToInt(Cost::getNumberInstances)
+                    .max().orElseThrow(NoSuchElementException::new);
+            int minInstances = costs.stream().mapToInt(Cost::getNumberInstances)
+                    .min().orElseThrow(NoSuchElementException::new);
 
-        double maxResources = costs.stream().mapToDouble(Cost::getResources)
-                .max().orElseThrow(NoSuchElementException::new);
-        double minResources = costs.stream().mapToDouble(Cost::getResources)
-                .min().orElseThrow(NoSuchElementException::new);
+            double maxResources = costs.stream().mapToDouble(Cost::getResources)
+                    .max().orElseThrow(NoSuchElementException::new);
+            double minResources = costs.stream().mapToDouble(Cost::getResources)
+                    .min().orElseThrow(NoSuchElementException::new);
 
-        double maxLicences = costs.stream().mapToDouble(Cost::getLicences)
-                .max().orElseThrow(NoSuchElementException::new);
-        double minLicences = costs.stream().mapToDouble(Cost::getLicences)
-                .min().orElseThrow(NoSuchElementException::new);
+            double maxLicences = costs.stream().mapToDouble(Cost::getLicences)
+                    .max().orElseThrow(NoSuchElementException::new);
+            double minLicences = costs.stream().mapToDouble(Cost::getLicences)
+                    .min().orElseThrow(NoSuchElementException::new);
 
-        double maxFragmentation = costs.stream().mapToDouble(Cost::getFragmentation)
-                .max().orElseThrow(NoSuchElementException::new);
-        double minFragmentation = costs.stream().mapToDouble(Cost::getFragmentation)
-                .min().orElseThrow(NoSuchElementException::new);
+            double maxFragmentation = costs.stream().mapToDouble(Cost::getFragmentation)
+                    .max().orElseThrow(NoSuchElementException::new);
+            double minFragmentation = costs.stream().mapToDouble(Cost::getFragmentation)
+                    .min().orElseThrow(NoSuchElementException::new);
 
-        double maxMaximunUseLink = costs.stream().mapToDouble(Cost::getMaximunUseLink)
-                .max().orElseThrow(NoSuchElementException::new);
-        double minMaximunUseLink = costs.stream().mapToDouble(Cost::getMaximunUseLink)
-                .min().orElseThrow(NoSuchElementException::new);
+            double maxMaximunUseLink = costs.stream().mapToDouble(Cost::getMaximunUseLink)
+                    .max().orElseThrow(NoSuchElementException::new);
+            double minMaximunUseLink = costs.stream().mapToDouble(Cost::getMaximunUseLink)
+                    .min().orElseThrow(NoSuchElementException::new);
 
-        for(Cost cost : costs) {
-            double normalizedEnergy = normalize(cost.getEnergy(), maxEnergy, minEnergy);
-            double normalizedBandwidth = normalize(cost.getBandwidth(), maxBandwidth, minBandwidth);
-            double normalizedDelay = normalize(cost.getDelay(), maxDelay, minDelay);
-            double normalizedDistance = normalize(cost.getDistance(), maxDistance, minDistance);
-            double normalizedInstances = normalize(cost.getNumberInstances(), maxInstances, minInstances);
-            double normalizedResources = normalize(cost.getResources(), maxResources, minResources);
-            double normalizedLicences = normalize(cost.getLicences(), maxLicences, minLicences);
-            double normalizedFragmentation = normalize(cost.getFragmentation(), maxFragmentation, minFragmentation);
-            double normalizedMaximunUseLink = normalize(cost.getMaximunUseLink(), maxMaximunUseLink, minMaximunUseLink);
+            for (Cost cost : costs) {
+                double normalizedEnergy = normalize(cost.getEnergy(), maxEnergy, minEnergy);
+                double normalizedBandwidth = normalize(cost.getBandwidth(), maxBandwidth, minBandwidth);
+                double normalizedDelay = normalize(cost.getDelay(), maxDelay, minDelay);
+                double normalizedDistance = normalize(cost.getDistance(), maxDistance, minDistance);
+                double normalizedInstances = normalize(cost.getNumberInstances(), maxInstances, minInstances);
+                double normalizedResources = normalize(cost.getResources(), maxResources, minResources);
+                double normalizedLicences = normalize(cost.getLicences(), maxLicences, minLicences);
+                double normalizedFragmentation = normalize(cost.getFragmentation(), maxFragmentation, minFragmentation);
+                double normalizedMaximunUseLink = normalize(cost.getMaximunUseLink(), maxMaximunUseLink, minMaximunUseLink);
 
-            double costNormalized = normalizedEnergy + normalizedBandwidth + normalizedDelay +
-                    normalizedDistance + normalizedInstances + normalizedResources + normalizedLicences +
-                    normalizedFragmentation + normalizedMaximunUseLink;
+                double costNormalized = normalizedEnergy + normalizedBandwidth + normalizedDelay +
+                        normalizedDistance + normalizedInstances + normalizedResources + normalizedLicences +
+                        normalizedFragmentation + normalizedMaximunUseLink;
 
-            cost.setCostNormalized(costNormalized / 9);
+                cost.setCostNormalized(costNormalized / 9);
+            }
         }
 
         return costs;
     }
 
-    private double normalize(double x, double max, double min){
-        if(max == min)
+    private double normalize(double x, double max, double min) {
+        if (max == min)
             return 0;
-        return (x - min)/(max - min);
+        return (x - min) / (max - min);
     }
 
 }

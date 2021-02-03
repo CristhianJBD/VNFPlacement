@@ -8,7 +8,6 @@ public class Cost {
     private String id;
     private double costNormalized;
     private ShortestPath shortestPath;
-    private boolean free;
 
     private double energy;
     private int delay;
