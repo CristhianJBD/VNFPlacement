@@ -681,7 +681,6 @@ public class VnfService {
         ShortestPath shortestPath;
         List<ShortestPath> kShortestPath;
         List<Cost> costs = new ArrayList<>();
-        Cost newCost;
         for (KPath kPath : links) {
             destinyNodeId = graphMultiStage.getEdgeTarget(kPath);
             kShortestPath = kPath.getKShortestPath();
@@ -689,10 +688,9 @@ public class VnfService {
                 shortestPath = kShortestPath.get(k);
                 Cost resultCost = calculateCosts(vnf, shortestPath, bandwidtCurrent);
                 if(resultCost != null) {
-                    newCost = new Cost();
-                    newCost.setId(destinyNodeId);
-                    newCost.setShortestPath(shortestPath);
-                    costs.add(newCost);
+                    resultCost.setId(destinyNodeId);
+                    resultCost.setShortestPath(shortestPath);
+                    costs.add(resultCost);
                 }
             }
         }
