@@ -16,10 +16,8 @@ import java.util.Random;
 public class TrafficService {
     Logger logger = Logger.getLogger(TrafficService.class);
 
-    public static List<Traffic> traffics;
-
     public List<Traffic> generateRandomtraffic(Map<String, Node> nodesMap, List<Vnf> vnfs) throws Exception {
-        traffics = new ArrayList<>();
+        List<Traffic> traffics = new ArrayList<>();
         Random rn = new Random();
         int sfcSize;int nodesSize;boolean aux;
         String[] nodesIdArray = new String[nodesMap.size()];
@@ -48,7 +46,7 @@ public class TrafficService {
                             aux = true;
                     }
 
-                    sfcSize = rn.nextInt(Configurations.trafficSfcMax - Configurations.trafficSfcMin)
+                    sfcSize = rn.nextInt(Configurations.trafficSfcMax - Configurations.trafficSfcMin + 1)
                             + Configurations.trafficSfcMin;
 
                     Vnf vnf;
@@ -73,7 +71,7 @@ public class TrafficService {
     }
 
     public List<Traffic> generateAllToAlltraffic(Map<String, Node> nodesMap, List<Vnf> vnfs) throws Exception {
-        traffics = new ArrayList<>();
+        List<Traffic> traffics = new ArrayList<>();
         Random rn = new Random();
         int sfcSize;
         try {

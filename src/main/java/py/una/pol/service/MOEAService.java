@@ -13,7 +13,6 @@ public class MOEAService {
     public void nsgaIII (){
         try {
             Configurations configurations = new Configurations();
-            TrafficService trafficService = new TrafficService();
             DataService data = new DataService();
 
             TournamentSelection tournamentSelection = new TournamentSelection();

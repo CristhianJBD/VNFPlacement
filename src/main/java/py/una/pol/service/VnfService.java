@@ -531,8 +531,8 @@ public class VnfService {
     private ResultPath provisionTraffic(Traffic traffic) throws Exception {
         ResultPath resultPath = new ResultPath();
         String originNodeId;
-        List<Path> pathNodeIds = new ArrayList<>();;
-        List<String> serverVnf = new ArrayList<>();;
+        List<Path> pathNodeIds = new ArrayList<>();
+        List<String> serverVnf = new ArrayList<>();
 
         double bandwidtCurrent;
         boolean validPlacement;
@@ -584,7 +584,7 @@ public class VnfService {
         }
         Vnf vnf = traffic.getSfc().getVnfs().get(indexVnf);
         //Normaliza los costos y guarda en un atributo
-        costs = normalizeCosts(vnf, originNodeId, bandwidtCurrent);
+        costs = normalizeCosts(vnf, originNodeId, bandwidtCurrent, nodesMapAux, linksMapAux);
 
         //Se ordena de acuerdo al valor normalizado
         costs = costs.stream().sorted(Comparator.comparing(Cost::getCostNormalized)).collect(Collectors.toList());
@@ -593,17 +593,19 @@ public class VnfService {
             destinyNodeId = destinyCosts.getId();
             shortestPath = destinyCosts.getShortestPath();
 
-            if (isResourceAvailableGraph(originNodeId, destinyNodeId, bandwidtCurrent,
-                    vnf, nodesMapAux, linksMapAux, shortestPath, serverVnf, traffic)) {
+            if (isResourceAvailableGraph(vnf, nodesMapAux, linksMapAux, shortestPath, bandwidtCurrent)) {
                 bandwidtCurrent = vnfSharedMap.get(vnf.getId()).getBandwidthFactor() * bandwidtCurrent;
+                pathNodeIds.add(new Path(originNodeId, destinyNodeId, shortestPath));
+                serverVnf.add(destinyNodeId);
                 originNodeId = destinyNodeId;
 
-                if (recursion(originNodeId, traffic, bandwidtCurrent, indexVnf + 1, pathNodeIds, serverVnf, nodesMapAux, linksMapAux)) {
-                    pathNodeIds.add(new Path(originNodeId, destinyNodeId, shortestPath));
+                if (recursion(originNodeId, traffic, bandwidtCurrent, indexVnf + 1, pathNodeIds, serverVnf, nodesMapAux, linksMapAux))
                     return true;
+                else {
+                    pathNodeIds.remove(indexVnf - 1);
+                    serverVnf.remove(indexVnf - 1);
                 }
             }
-            serverVnf.remove(indexVnf - 1);
             nodesMapAux = loadNodesMapAux(nodesMap);
             linksMapAux = loadLinkMapAux(linksMap);
         }
@@ -611,11 +613,11 @@ public class VnfService {
     }
 
     // Calcula el costo de todas las funciones objetivos al instalar un VNF
-    private Cost calculateCosts(Vnf vnf, ShortestPath shortestPath, double bandwidtCurrent) throws Exception {
+    private Cost calculateCosts(Vnf vnf, ShortestPath shortestPath, double bandwidtCurrent, Map<String, Node> nodesMap, Map<String, Link> linksMap) throws Exception {
         ObjectiveFunctionService ofs = new ObjectiveFunctionService();
 
-        Map<String, Node> nodesMapAux = loadNodesMapAux(this.nodesMap);
-        Map<String, Link> linksMapAux = loadLinkMapAux(this.linksMap);
+        Map<String, Node> nodesMapAux = loadNodesMapAux(nodesMap);
+        Map<String, Link> linksMapAux = loadLinkMapAux(linksMap);
 
         boolean result = isResourceAvailableGraph(vnf, nodesMapAux, linksMapAux, shortestPath, bandwidtCurrent);
 
@@ -628,6 +630,7 @@ public class VnfService {
     private boolean isResourceAvailableGraph(Vnf vnf, Map<String, Node> nodesMapAux, Map<String, Link> linksMapAux,
                                              ShortestPath shortestPath, double bandwidtCurrent) throws Exception {
         VnfShared vnfToInstall;
+        int cpuToUse, ramToUse;
         List<VnfShared> vnfsShared;
         double bandwidtUsed;
         Link link;
@@ -637,14 +640,39 @@ public class VnfService {
             Node node = nodesMapAux.get(nodeDestinyId);
             Server server = node.getServer();
             if (server != null) {
-                //Vnf a instalar en el servidor por primera vez
-                vnfToInstall = installVNF(server, vnf);
-                if (vnfToInstall != null) {
-                    vnfsShared = new ArrayList<>();
-                    vnfsShared.add(vnfToInstall);
-                    server.getVnfs().put(vnf.getId(), vnfsShared);
+                //se verifica si el vnf ya esta instalado para poder reutilizar
+                vnfsShared = server.getVnfs().get(vnf.getId());
+                if (vnfsShared == null) {
+                    //Vnf a instalar en el servidor por primera vez
+                    vnfToInstall = installVNF(server, vnf);
+                    if (vnfToInstall != null) {
+                        vnfsShared = new ArrayList<>();
+                        vnfsShared.add(vnfToInstall);
+                        server.getVnfs().put(vnf.getId(), vnfsShared);
+                    } else {
+                        return false;
+                    }
                 } else {
-                    return false;
+                    //Buscar VNF compartido para reutilizar
+                    for (VnfShared vnfShared : vnfsShared) {
+                        cpuToUse = vnfShared.getResourceCPUUsed() + vnf.getResourceCPU();
+                        ramToUse = vnfShared.getResourceRAMUsed() + vnf.getResourceRAM();
+                        if (cpuToUse <= vnfShared.getResourceCPU() && ramToUse <= vnfShared.getResourceRAM()) {
+                            vnfShared.setResourceRAMUsed(ramToUse);
+                            vnfShared.setResourceCPUUsed(cpuToUse);
+                            vnfShared.getVnfs().add(vnf);
+                            return true;
+                        }
+                    }
+
+                    //Instalar un nuevo VNF porque no existe espacio
+                    vnfToInstall = installVNF(server, vnf);
+                    if (vnfToInstall != null) {
+                        vnfsShared.add(vnfToInstall);
+                        server.getVnfs().put(vnf.getId(), vnfsShared);
+                    } else {
+                        return false;
+                    }
                 }
             } else {
                 return false;
@@ -675,7 +703,7 @@ public class VnfService {
     }
 
     private List<Cost> normalizeCosts(Vnf vnf,
-                                      String originNodeId, double bandwidtCurrent) throws Exception {
+                                      String originNodeId, double bandwidtCurrent, Map<String, Node> nodesMap, Map<String, Link> linksMap) throws Exception {
         Set<KPath> links = graphMultiStage.outgoingEdgesOf(originNodeId);
         String destinyNodeId;
         ShortestPath shortestPath;
@@ -686,7 +714,7 @@ public class VnfService {
             kShortestPath = kPath.getKShortestPath();
             for (int k = 0; k < kShortestPath.size(); k++) {
                 shortestPath = kShortestPath.get(k);
-                Cost resultCost = calculateCosts(vnf, shortestPath, bandwidtCurrent);
+                Cost resultCost = calculateCosts(vnf, shortestPath, bandwidtCurrent, nodesMap, linksMap);
                 if(resultCost != null) {
                     resultCost.setId(destinyNodeId);
                     resultCost.setShortestPath(shortestPath);

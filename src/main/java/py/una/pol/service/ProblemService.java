@@ -34,7 +34,7 @@ public class ProblemService extends AbstractProblem {
 
             Permutation permutation = new Permutation(Configurations.numberTraffic);
             for (int i = 0; i < getNumberOfVariables(); i++) {
-              //  permutation.randomize();
+               // permutation.randomize();
                 solution.setVariable(i, permutation);
             }
 
