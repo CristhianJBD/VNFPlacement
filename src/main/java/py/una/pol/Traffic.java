@@ -8,8 +8,8 @@ public class Traffic {
 
     public static void main(String[] args) throws Exception {
 
-        Configurations configurations = new Configurations();
-        DataService dataService = new DataService();
+        Configurations.loadProperties();
+        DataService.loadData();
         TrafficService trafficService = new TrafficService();
 
         trafficService.generateRandomtraffic(DataService.nodesMap, DataService.vnfs);

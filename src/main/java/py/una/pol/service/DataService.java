@@ -14,23 +14,23 @@ import java.io.FileReader;
 import java.util.*;
 
 public class DataService {
-    Logger logger = Logger.getLogger(DataService.class);
+    static Logger logger = Logger.getLogger(DataService.class);
 
-    private List<String> linksString;
+    private static List<String> linksString;
     public static final Graph<Node, Link> graph = new SimpleGraph<>(Link.class);
     public static Map<String, List<ShortestPath>> shortestPathMap = new HashMap<>();
-    public Map<String, Node> nodes = new HashMap<>();
+    public static Map<String, Node> nodes = new HashMap<>();
     public static Map<String, Node> nodesMap = new HashMap<>();
     public static Map<String, Link> linksMap = new HashMap<>();
     public static Map<String, VnfShared> vnfsShared = new HashMap<>();
     public static List<Vnf> vnfs = new ArrayList<>();
-    public Map<String, Server> servers = new HashMap<>();
+    public static Map<String, Server> servers = new HashMap<>();
 
     public DataService() throws Exception {
         loadData();
     }
 
-    public void loadData() throws Exception {
+    public static void loadData() throws Exception {
         try {
             logger.info("Valores iniciales: ");
             loadVnfsShared();
@@ -48,7 +48,7 @@ public class DataService {
     }
 
 
-    private void loadVnfsShared() throws Exception {
+    private static void loadVnfsShared() throws Exception {
         BufferedReader reader = null;
         VnfShared vnfShared;
         String vnfLine;
@@ -88,7 +88,7 @@ public class DataService {
         }
     }
 
-    private void loadVnfs() throws Exception {
+    private static void loadVnfs() throws Exception {
         BufferedReader reader = null;
         Vnf vnf;
         String vnfLine;
@@ -124,7 +124,7 @@ public class DataService {
     }
 
 
-    private void loadServers() throws Exception {
+    private static void loadServers() throws Exception {
         BufferedReader reader = null;
         Server server;
         String serverLine;
@@ -168,7 +168,7 @@ public class DataService {
     }
 
 
-    private void loadNodes() throws Exception {
+    private static void loadNodes() throws Exception {
         BufferedReader reader = null;
         Node node;
         String nodeString;
@@ -204,7 +204,7 @@ public class DataService {
         }
     }
 
-    private void loadLinks() throws Exception {
+    private static void loadLinks() throws Exception {
         BufferedReader reader = null;
         String linkLine;
         try {
@@ -225,7 +225,7 @@ public class DataService {
         }
     }
 
-    private void loadGraph() throws Exception {
+    private static void loadGraph() throws Exception {
         Link link;
         try {
             for (Node node : nodes.values())
@@ -255,7 +255,7 @@ public class DataService {
     }
 
     //Obtiene los k caminos mas cortos(por cantidad de saltos), de cada par de nodos
-    private void kShortestPath() throws Exception {
+    private static void kShortestPath() throws Exception {
         try {
             KShortestPaths<Node, Link> pathInspector =
                     new KShortestPaths<>(graph, Configurations.k, Integer.MAX_VALUE);

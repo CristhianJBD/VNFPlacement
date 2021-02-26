@@ -15,9 +15,9 @@ import java.util.Random;
 
 public class TrafficService {
     Logger logger = Logger.getLogger(TrafficService.class);
+    public static List<Traffic> traffics = new ArrayList<>();
 
     public List<Traffic> generateRandomtraffic(Map<String, Node> nodesMap, List<Vnf> vnfs) throws Exception {
-        List<Traffic> traffics = new ArrayList<>();
         Random rn = new Random();
         int sfcSize;int nodesSize;boolean aux;
         String[] nodesIdArray = new String[nodesMap.size()];
@@ -71,7 +71,6 @@ public class TrafficService {
     }
 
     public List<Traffic> generateAllToAlltraffic(Map<String, Node> nodesMap, List<Vnf> vnfs) throws Exception {
-        List<Traffic> traffics = new ArrayList<>();
         Random rn = new Random();
         int sfcSize;
         try {
@@ -143,7 +142,6 @@ public class TrafficService {
     public List<Traffic> readTraffics() throws Exception {
         FileInputStream fileInputStream = null;
         ObjectInputStream objectInputStream = null;
-        List<Traffic> trafficList = new ArrayList<>();
         Gson gson = new Gson();
         String trafficStringRead;
         try {
@@ -152,9 +150,9 @@ public class TrafficService {
 
             for (int i = 0; i < Configurations.numberTraffic; i++) {
                 trafficStringRead = (String) objectInputStream.readObject();
-                trafficList.add(gson.fromJson(trafficStringRead, Traffic.class));
+                traffics.add(gson.fromJson(trafficStringRead, Traffic.class));
             }
-            return trafficList;
+            return traffics;
         } catch (Exception e) {
             logger.error("Error al leer del archivo de traficos");
             throw new Exception();

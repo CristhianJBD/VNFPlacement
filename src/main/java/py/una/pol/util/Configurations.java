@@ -9,7 +9,7 @@ import java.io.InputStream;
 import java.util.Properties;
 
 public class Configurations {
-    Logger logger = Logger.getLogger(Configurations.class);
+    static Logger logger = Logger.getLogger(Configurations.class);
 
     //Parametros de Sistema
     public static String networkPackage;
@@ -45,7 +45,7 @@ public class Configurations {
         loadProperties();
     }
 
-    public void loadProperties() throws Exception {
+    public static void loadProperties() throws Exception {
         try (InputStream input = new FileInputStream(System.getProperty("app.home") + "/vnf_placement.properties")) {
 
             Properties prop = new Properties();

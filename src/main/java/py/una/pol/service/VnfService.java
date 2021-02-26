@@ -94,8 +94,6 @@ public class VnfService {
                 }
                 count++;
             }
-            //  logger.info(ofs.solutions);
-            // ofs.writeSolutions(ofs.solutions);
         } catch (Exception e) {
             logger.error("Error VNF placement: " + e.getMessage());
         }
@@ -334,8 +332,7 @@ public class VnfService {
     private boolean isResourceAvailableLink(String nodeOriginId, String nodeDestinyId, double bandwidtCurrent,
                                             Map<String, Link> linksMapAux, Map<String, Node> nodesMapAux,
                                             ShortestPath shortestPath, Traffic traffic) throws Exception {
-        Link link;
-        Node node;
+        Link link;Node node;
         double bandwidtUsed;
         try {
             if (!nodeDestinyId.equals(nodeOriginId)) {
@@ -380,7 +377,6 @@ public class VnfService {
                         return true;
                 }
             }
-
             vnfToInstall = vnfSharedMap.get(vnf.getId());
             cpuToUse = server.getResourceCPUUsed() + vnfToInstall.getResourceCPU();
             ramToUse = server.getResourceRAMUsed() + vnfToInstall.getResourceRAM();

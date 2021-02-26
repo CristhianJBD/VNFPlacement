@@ -16,40 +16,36 @@ import java.util.Properties;
 
 public class MOEAService {
     Logger logger = Logger.getLogger(MOEAService.class);
-
     public void nsgaIII() {
-        try {
-            Configurations configurations = new Configurations();
-            DataService data = new DataService();
-            VnfService vnfService = new VnfService();
-            TrafficService trafficService = new TrafficService();
-            List<Traffic> traffics = trafficService.readTraffics();
+        VnfService vnfService = new VnfService();
+        TrafficService trafficService = new TrafficService();
+        List<ResultGraphMap> resultGraphMaps = new ArrayList<>();
 
-            TournamentSelection tournamentSelection = new TournamentSelection();
+        try {
+            Configurations.loadProperties();
+            DataService.loadData();
+            List<Traffic> traffics = trafficService.readTraffics();
 
             Properties properties = new Properties();
             properties.setProperty("populationSize", "20");
             properties.setProperty("sbx.swap", "true");
 
-
             NondominatedPopulation result = new Executor()
                     .withProblemClass(ProblemService.class)
                     .withAlgorithm("NSGAIII")
                     .withProperties(properties)
-
                     //  .withMaxEvaluations(1000)
                     .withMaxTime(10000)
                     //      .distributeOnAllCores()
                     .run();
 
-            //Configurar algoritmo de seleccion, operador de cruce y mutacion
+            // TODO Configurar algoritmo de seleccion, operador de cruce y mutacion
 
             //display the results
             System.out.format("Nro.     Bandwidth       Energy          Delay           Distance        " +
                     "Fragmentation       Licence        LoadTrafic      MaxUseLink      NumberIntances" +
                     "    Resources     SLO        Throughput%n");
 
-            List<ResultGraphMap> resultGraphMaps = new ArrayList<>();
             int i = 1;
             for (Solution solution : result) {
                 System.out.format(i++ + "       %.4f        %.4f        %.4f        %.4f        %.4f" +
@@ -68,7 +64,7 @@ public class MOEAService {
                         solution.getObjective(10),
                         solution.getObjective(11));
 
-                //Cada pareto llamad de nuevo a placement para obtener las ubicaciones
+                //Cada pareto llama de nuevo a placement para obtener las ubicaciones
                 resultGraphMaps.add(
                         vnfService.placementGraph(traffics, (Permutation) solution.getVariable(0)));
             }
