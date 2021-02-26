@@ -23,59 +23,82 @@ public class VnfService {
     private Map<String, Link> linksMap;
     private Map<String, VnfShared> vnfSharedMap;
 
-
-    public boolean placement() {
-        TrafficService trafficService = new TrafficService();
+    public SolutionTraffic placement(List<Traffic> traffics, Permutation permutation) {
         ObjectiveFunctionService ofs = new ObjectiveFunctionService();
+        SolutionTraffic solutionTraffic;
+        try {
+            nodesMap = loadNodesMapAux(DataService.nodesMap);
+            linksMap = loadLinkMapAux(DataService.linksMap);
+
+            traffics = loadTraffics(traffics);
+            solution(traffics, permutation);
+            solutionTraffic = ofs.solutionTrafficFOs(nodesMap, linksMap, traffics, DataService.vnfsShared);
+
+            return solutionTraffic;
+        } catch (Exception e) {
+            logger.error("Error VNF placement: " + e.getMessage());
+        }
+        return null;
+    }
+
+    public ResultGraphMap placementGraph(List<Traffic> traffics, Permutation permutation) {
+        ResultGraphMap resultGraphMap = new ResultGraphMap();
+        try {
+            nodesMap = loadNodesMapAux(DataService.nodesMap);
+            linksMap = loadLinkMapAux(DataService.linksMap);
+
+            traffics = loadTraffics(traffics);
+            solution(traffics, permutation);
+
+            resultGraphMap.setNodesMap(nodesMap);
+            resultGraphMap.setLinksMap(linksMap);
+
+            return resultGraphMap;
+        } catch (Exception e) {
+            logger.error("Error en placementGraph: " + e.getMessage());
+        }
+        return null;
+    }
+
+    public void solution(List<Traffic> traffics, Permutation permutation) {
         ResultPath resultPath;
-        List<Traffic> traffics;
+        Traffic traffic;
         try {
             shortestPathMap = DataService.shortestPathMap;
             vnfSharedMap = DataService.vnfsShared;
 
-            if (Configurations.trafficsRandom)
-                traffics = trafficService.generateRandomtraffic(DataService.nodesMap, DataService.vnfs);
-            else
-                traffics = trafficService.generateAllToAlltraffic(DataService.nodesMap, DataService.vnfs);
-
-            for (int i = 1; i <= Configurations.numberSolutions; i++) {
-                nodesMap = loadNodesMapAux(DataService.nodesMap);
-                linksMap = loadLinkMapAux(DataService.linksMap);
-                int count = 1;
-                logger.info("Tanda: " + i);
-                for (Traffic traffic : traffics) {
-                    traffic.setRejectLink(0);
-                    traffic.setRejectNode(0);
-                    graphMultiStage = createGraphtMultiStage(traffic);
-                    if (graphMultiStage == null) {
-                        traffic.setRejectNode(1);
+            int count = 1;
+            for (int i = 0; i < permutation.size(); i++) {
+                traffic = traffics.get(permutation.get(i));
+                traffic.setRejectLink(0);
+                traffic.setRejectNode(0);
+                graphMultiStage = createGraphtMultiStage(traffic);
+                if (graphMultiStage == null) {
+                    traffic.setRejectNode(1);
+                    traffic.setProcessed(false);
+                    traffic.setResultPath(null);
+                    logger.warn(count + "- No Grafo Multi-Estados: " +
+                            "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
+                } else {
+                    resultPath = provisionTraffic(traffic);
+                    traffic.setResultPath(resultPath);
+                    if (resultPath == null) {
                         traffic.setProcessed(false);
-                        traffic.setResultPath(null);
-                        logger.warn(count + "- No Grafo Multi-Estados: " +
+                        logger.warn(count + "- No Solucion: " +
                                 "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
                     } else {
-                        resultPath = provisionTrafficRandom(traffic);
-                        traffic.setResultPath(resultPath);
-                        if (resultPath == null) {
-                            traffic.setProcessed(false);
-                            logger.warn(count + "- No Solucion: " +
-                                    "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
-                        } else {
-                            traffic.setProcessed(true);
-                            logger.info(count + "- Solucion: " +
-                                    "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
-                        }
+                        traffic.setProcessed(true);
+                        logger.info(count + "- Solucion: " +
+                                "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
                     }
-                    count++;
                 }
-                ofs.solutionFOs(nodesMap, linksMap, traffics, DataService.vnfsShared);
+                count++;
             }
-            logger.info(ofs.solutions);
-            ofs.writeSolutions(ofs.solutions);
+            //  logger.info(ofs.solutions);
+            // ofs.writeSolutions(ofs.solutions);
         } catch (Exception e) {
             logger.error("Error VNF placement: " + e.getMessage());
         }
-        return true;
     }
 
     private DirectedGraph<String, KPath> createGraphtMultiStage(Traffic traffic) throws Exception {
@@ -191,65 +214,23 @@ public class VnfService {
         }
     }
 
-    private ResultPath provisionTrafficRandom(Traffic traffic) throws Exception {
+    private ResultPath provisionTraffic(Traffic traffic) throws Exception {
         ResultPath resultPath = new ResultPath();
-        String randomNodeId, originNodeId;
-        Random rn = new Random();
-        Map<String, Node> nodesMapAux = null;
-        Map<String, Link> linksMapAux = null;
-        List<Path> pathNodeIds = null;
-        List<String> serverVnf = null;
-        List<ShortestPath> kShortestPath;
+        String originNodeId;
+        List<Path> pathNodeIds = new ArrayList<>();
+        List<String> serverVnf = new ArrayList<>();
+
         double bandwidtCurrent;
-        boolean validPlacement = false;
-        int retries = 0, indexVnf;
-        ShortestPath shortestPath;
-        Vnf vnf;
+        boolean validPlacement;
         try {
-            while (!validPlacement && retries <= Configurations.retriesSolution) {
-                originNodeId = traffic.getNodeOriginId();
-                bandwidtCurrent = traffic.getBandwidth();
-                nodesMapAux = loadNodesMapAux(this.nodesMap);
-                linksMapAux = loadLinkMapAux(this.linksMap);
-                pathNodeIds = new ArrayList<>();
-                serverVnf = new ArrayList<>();
+            Map<String, Node> nodesMapAux = loadNodesMapAux(nodesMap);
+            Map<String, Link> linksMapAux = loadLinkMapAux(linksMap);
+            originNodeId = traffic.getNodeOriginId();
+            bandwidtCurrent = traffic.getBandwidth();
 
-                retries = retries + 1;
-                indexVnf = 0;
-                while (!validPlacement) {  //Hasta completar una ruta random
-                    //De forma randomica se obtiene un nodo del grafo multi estados
-                    Set<KPath> links = graphMultiStage.outgoingEdgesOf(originNodeId);
-                    KPath kPath = (KPath) links.toArray()
-                            [rn.nextInt(graphMultiStage.outDegreeOf(originNodeId))];
-                    kShortestPath = kPath.getKShortestPath();
-                    shortestPath = kShortestPath.get(rn.nextInt(kShortestPath.size()));
-                    randomNodeId = graphMultiStage.getEdgeTarget(kPath);
+            validPlacement = recursion(originNodeId, traffic, bandwidtCurrent, 0, pathNodeIds, serverVnf, nodesMapAux, linksMapAux);
 
-                    //la ruta es valida si se llega hasta el nodo destino
-                    if (traffic.getNodeDestinyId().equals(randomNodeId)) {
-                        if (!isResourceAvailableLink(originNodeId, randomNodeId,
-                                bandwidtCurrent, linksMapAux, nodesMapAux, shortestPath, traffic)) {
-                            break;
-                        } else {
-                            validPlacement = true;
-                            pathNodeIds.add(new Path(kPath.getId(), shortestPath));
-                        }
-                    } else {
-                        vnf = traffic.getSfc().getVnfs().get(indexVnf);
-                        if (!isResourceAvailableGraph(originNodeId, randomNodeId, bandwidtCurrent,
-                                vnf, nodesMapAux, linksMapAux, shortestPath, serverVnf, traffic))
-                            break;
-                        else {
-                            bandwidtCurrent = vnfSharedMap.get(vnf.getId()).getBandwidthFactor() * bandwidtCurrent;
-                            pathNodeIds.add(new Path(kPath.getId(), shortestPath));
-                            originNodeId = randomNodeId;
-                            indexVnf = indexVnf + 1;
-                        }
-                    }
-                }
-            }
             if (validPlacement) {
-                updateGraphMap(nodesMapAux, linksMapAux);
                 resultPath.setPaths(pathNodeIds);
                 resultPath.setServerVnf(serverVnf);
                 return resultPath;
@@ -261,87 +242,60 @@ public class VnfService {
         }
     }
 
-    private boolean isResourceAvailableGraph(String nodeOriginId, String nodeDestinyId,
-                                             double bandwidtCurrent, Vnf vnf, Map<String, Node> nodesMapAux,
-                                             Map<String, Link> linksMapAux, ShortestPath shortestPath,
-                                             List<String> serverVnf, Traffic traffic) throws Exception {
-        int cpuToUse, ramToUse;
-        VnfShared vnfToInstall;
-        List<VnfShared> vnfsShared;
-        double bandwidtUsed;
-        Link link;
-        try {
-            String nodeId = shortestPath.getNodes().get(shortestPath.getNodes().size() - 1);
-            Node node = nodesMapAux.get(nodeId);
-            Server server = node.getServer();
-            if (server != null) {
-                //se verifica si el vnf ya esta instalado para poder reutilizar
-                vnfsShared = server.getVnfs().get(vnf.getId());
-                if (vnfsShared == null) {
-                    //Vnf a instalar en el servidor por primera vez
-                    vnfToInstall = installVNF(server, vnf);
-                    if (vnfToInstall != null) {
-                        vnfsShared = new ArrayList<>();
-                        vnfsShared.add(vnfToInstall);
-                        server.getVnfs().put(vnf.getId(), vnfsShared);
-                        serverVnf.add(node.getId());
-                    } else {
-                        traffic.setRejectNode(traffic.getRejectNode() + 1);
-                        return false;
-                    }
-                } else {
-                    //Buscar VNF compartido para reutilizar
-                    for (VnfShared vnfShared : vnfsShared) {
-                        cpuToUse = vnfShared.getResourceCPUUsed() + vnf.getResourceCPU();
-                        ramToUse = vnfShared.getResourceRAMUsed() + vnf.getResourceRAM();
-                        if (cpuToUse <= vnfShared.getResourceCPU() && ramToUse <= vnfShared.getResourceRAM()) {
-                            vnfShared.setResourceRAMUsed(ramToUse);
-                            vnfShared.setResourceCPUUsed(cpuToUse);
-                            vnfShared.getVnfs().add(vnf);
-                            serverVnf.add(node.getId());
-                            return true;
-                        }
-                    }
+    private boolean recursion(String originNodeId, Traffic traffic, double bandwidtCurrent, int indexVnf,
+                              List<Path> pathNodeIds, List<String> serverVnf,
+                              Map<String, Node> nodesMap, Map<String, Link> linksMap) throws Exception {
+        Map<String, Node> nodesMapAux = loadNodesMapAux(nodesMap);
+        Map<String, Link> linksMapAux = loadLinkMapAux(linksMap);
+        ShortestPath shortestPath;
+        List<Cost> costs;
+        String destinyNodeId;
 
-                    //Instalar un nuevo VNF porque no existe espacio
-                    vnfToInstall = installVNF(server, vnf);
-                    if (vnfToInstall != null) {
-                        vnfsShared.add(vnfToInstall);
-                        server.getVnfs().put(vnf.getId(), vnfsShared);
-                        serverVnf.add(node.getId());
-                    } else {
-                        traffic.setRejectNode(traffic.getRejectNode() + 1);
-                        return false;
-                    }
+        if (traffic.getSfc().getVnfs().size() == indexVnf) {
+            Set<KPath> links = graphMultiStage.outgoingEdgesOf(originNodeId);
+            destinyNodeId = graphMultiStage.getEdgeTarget(links.iterator().next());
+
+            if (traffic.getNodeDestinyId().equals(destinyNodeId)) {
+                for(ShortestPath shortestPathLast : links.iterator().next().getKShortestPath()) {
+                    if (isResourceAvailableLink(originNodeId, destinyNodeId,
+                            bandwidtCurrent, linksMapAux, nodesMapAux, shortestPathLast, traffic)) {
+                        pathNodeIds.add(new Path(originNodeId, destinyNodeId, shortestPathLast));
+                        updateGraphMap(nodesMapAux, linksMapAux);
+                        return true;
+                    } else
+                        linksMapAux = loadLinkMapAux(linksMap);
                 }
-            } else {
-                traffic.setRejectNode(traffic.getRejectNode() + 1);
                 return false;
             }
-            if (!nodeDestinyId.equals(nodeOriginId)) {
-                for (String linkId : shortestPath.getLinks()) {
-                    link = linksMapAux.get(linkId);
-                    bandwidtUsed = link.getBandwidthUsed() + bandwidtCurrent;
-                    if (link.getBandwidth() < bandwidtUsed) {
-                        traffic.setRejectLink(traffic.getRejectLink() + 1);
-                        return false;
-                    } else {
-                        link.setBandwidthUsed(bandwidtUsed);
-                        link.setTrafficAmount(link.getTrafficAmount() + 1);
-                    }
-                }
-                if (shortestPath.getLinks().size() != 0) {
-                    for (int i = 0; i < shortestPath.getNodes().size() - 1; i++) {
-                        node = nodesMapAux.get(shortestPath.getNodes().get(i));
-                        node.setTrafficAmount(node.getTrafficAmount() + 1);
-                    }
+        }
+        Vnf vnf = traffic.getSfc().getVnfs().get(indexVnf);
+        //Normaliza los costos y guarda en un atributo
+        costs = normalizeCosts(vnf, originNodeId, bandwidtCurrent, nodesMapAux, linksMapAux);
+
+        //Se ordena de acuerdo al valor normalizado
+        costs = costs.stream().sorted(Comparator.comparing(Cost::getCostNormalized)).collect(Collectors.toList());
+
+        for (Cost destinyCosts : costs) {
+            destinyNodeId = destinyCosts.getId();
+            shortestPath = destinyCosts.getShortestPath();
+
+            if (isResourceAvailableGraph(vnf, nodesMapAux, linksMapAux, shortestPath, bandwidtCurrent)) {
+                bandwidtCurrent = vnfSharedMap.get(vnf.getId()).getBandwidthFactor() * bandwidtCurrent;
+                pathNodeIds.add(new Path(originNodeId, destinyNodeId, shortestPath));
+                serverVnf.add(destinyNodeId);
+                originNodeId = destinyNodeId;
+
+                if (recursion(originNodeId, traffic, bandwidtCurrent, indexVnf + 1, pathNodeIds, serverVnf, nodesMapAux, linksMapAux))
+                    return true;
+                else {
+                    pathNodeIds.remove(indexVnf - 1);
+                    serverVnf.remove(indexVnf - 1);
                 }
             }
-            return true;
-        } catch (Exception e) {
-            logger.error("Error en IsResourceAvailableGraph: " + e.getMessage());
-            throw new Exception();
+            nodesMapAux = loadNodesMapAux(nodesMap);
+            linksMapAux = loadLinkMapAux(linksMap);
         }
+        return false;
     }
 
     private VnfShared installVNF(Server server, Vnf vnf) throws Exception {
@@ -467,6 +421,21 @@ public class VnfService {
         }
     }
 
+    private List<Traffic> loadTraffics(List<Traffic> traffics) throws Exception {
+        List<Traffic> trafficsAux = new ArrayList<>();
+        Traffic trafficAux;
+        try{
+            for(Traffic traffic : traffics){
+                trafficAux = new Traffic(traffic);
+                trafficsAux.add(trafficAux);
+            }
+            return trafficsAux;
+        }catch (Exception e){
+            logger.error("Error en loadTraffics: " + e.getMessage());
+            throw new Exception();
+        }
+    }
+
     private void updateGraphMap(Map<String, Node> nodesMapAux, Map<String, Link> linksMapAux)
             throws Exception {
         try {
@@ -476,140 +445,6 @@ public class VnfService {
             logger.error("Error en updateGraphMap: " + e.getMessage());
             throw new Exception();
         }
-    }
-
-    public SolutionTraffic placement(List<Traffic> traffics, Permutation permutation) {
-        ObjectiveFunctionService ofs = new ObjectiveFunctionService();
-        ResultPath resultPath;
-        SolutionTraffic solutionTraffic;
-        Traffic traffic;
-        try {
-            shortestPathMap = DataService.shortestPathMap;
-            vnfSharedMap = DataService.vnfsShared;
-            nodesMap = loadNodesMapAux(DataService.nodesMap);
-            linksMap = loadLinkMapAux(DataService.linksMap);
-
-            int count = 1;
-            for (int i = 0; i < permutation.size(); i++) {
-                traffic = traffics.get(permutation.get(i));
-                traffic.setRejectLink(0);
-                traffic.setRejectNode(0);
-                graphMultiStage = createGraphtMultiStage(traffic);
-                if (graphMultiStage == null) {
-                    traffic.setRejectNode(1);
-                    traffic.setProcessed(false);
-                    traffic.setResultPath(null);
-                    logger.warn(count + "- No Grafo Multi-Estados: " +
-                            "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
-                } else {
-                    resultPath = provisionTraffic(traffic);
-                    traffic.setResultPath(resultPath);
-                    if (resultPath == null) {
-                        traffic.setProcessed(false);
-                        logger.warn(count + "- No Solucion: " +
-                                "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
-                    } else {
-                        traffic.setProcessed(true);
-                        logger.info(count + "- Solucion: " +
-                                "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
-                    }
-                }
-                count++;
-            }
-            solutionTraffic = ofs.solutionTrafficFOs(nodesMap, linksMap, traffics, DataService.vnfsShared);
-
-            //  logger.info(ofs.solutions);
-            // ofs.writeSolutions(ofs.solutions);
-            return solutionTraffic;
-        } catch (Exception e) {
-            logger.error("Error VNF placement: " + e.getMessage());
-        }
-        return null;
-    }
-
-
-    private ResultPath provisionTraffic(Traffic traffic) throws Exception {
-        ResultPath resultPath = new ResultPath();
-        String originNodeId;
-        List<Path> pathNodeIds = new ArrayList<>();
-        List<String> serverVnf = new ArrayList<>();
-
-        double bandwidtCurrent;
-        boolean validPlacement;
-        try {
-            Map<String, Node> nodesMapAux = loadNodesMapAux(nodesMap);
-            Map<String, Link> linksMapAux = loadLinkMapAux(linksMap);
-            originNodeId = traffic.getNodeOriginId();
-            bandwidtCurrent = traffic.getBandwidth();
-
-            validPlacement = recursion(originNodeId, traffic, bandwidtCurrent, 0, pathNodeIds, serverVnf, nodesMapAux, linksMapAux);
-
-            if (validPlacement) {
-                resultPath.setPaths(pathNodeIds);
-                resultPath.setServerVnf(serverVnf);
-                return resultPath;
-            } else
-                return null;
-        } catch (Exception e) {
-            logger.error("Error en el provisionTraffic:" + e.getMessage());
-            throw new Exception();
-        }
-    }
-
-    private boolean recursion(String originNodeId, Traffic traffic, double bandwidtCurrent, int indexVnf,
-                              List<Path> pathNodeIds, List<String> serverVnf,
-                              Map<String, Node> nodesMap, Map<String, Link> linksMap) throws Exception {
-        Map<String, Node> nodesMapAux = loadNodesMapAux(nodesMap);
-        Map<String, Link> linksMapAux = loadLinkMapAux(linksMap);
-        ShortestPath shortestPath;
-        List<Cost> costs;
-        String destinyNodeId;
-
-        if (traffic.getSfc().getVnfs().size() == indexVnf) {
-            Set<KPath> links = graphMultiStage.outgoingEdgesOf(originNodeId);
-            destinyNodeId = graphMultiStage.getEdgeTarget(links.iterator().next());
-
-            if (traffic.getNodeDestinyId().equals(destinyNodeId)) {
-                for(ShortestPath shortestPathLast : links.iterator().next().getKShortestPath()) {
-                    if (isResourceAvailableLink(originNodeId, destinyNodeId,
-                            bandwidtCurrent, linksMapAux, nodesMapAux, shortestPathLast, traffic)) {
-                        pathNodeIds.add(new Path(originNodeId, destinyNodeId, shortestPathLast));
-                        updateGraphMap(nodesMapAux, linksMapAux);
-                        return true;
-                    } else
-                        linksMapAux = loadLinkMapAux(linksMap);
-                }
-                return false;
-            }
-        }
-        Vnf vnf = traffic.getSfc().getVnfs().get(indexVnf);
-        //Normaliza los costos y guarda en un atributo
-        costs = normalizeCosts(vnf, originNodeId, bandwidtCurrent, nodesMapAux, linksMapAux);
-
-        //Se ordena de acuerdo al valor normalizado
-        costs = costs.stream().sorted(Comparator.comparing(Cost::getCostNormalized)).collect(Collectors.toList());
-
-        for (Cost destinyCosts : costs) {
-            destinyNodeId = destinyCosts.getId();
-            shortestPath = destinyCosts.getShortestPath();
-
-            if (isResourceAvailableGraph(vnf, nodesMapAux, linksMapAux, shortestPath, bandwidtCurrent)) {
-                bandwidtCurrent = vnfSharedMap.get(vnf.getId()).getBandwidthFactor() * bandwidtCurrent;
-                pathNodeIds.add(new Path(originNodeId, destinyNodeId, shortestPath));
-                serverVnf.add(destinyNodeId);
-                originNodeId = destinyNodeId;
-
-                if (recursion(originNodeId, traffic, bandwidtCurrent, indexVnf + 1, pathNodeIds, serverVnf, nodesMapAux, linksMapAux))
-                    return true;
-                else {
-                    pathNodeIds.remove(indexVnf - 1);
-                    serverVnf.remove(indexVnf - 1);
-                }
-            }
-            nodesMapAux = loadNodesMapAux(nodesMap);
-            linksMapAux = loadLinkMapAux(linksMap);
-        }
-        return false;
     }
 
     // Calcula el costo de todas las funciones objetivos al instalar un VNF
