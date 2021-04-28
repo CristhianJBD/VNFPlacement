@@ -1,6 +1,7 @@
 package py.una.pol.service;
 
 import org.apache.log4j.Logger;
+import org.moeaframework.Analyzer;
 import org.moeaframework.Executor;
 import org.moeaframework.core.NondominatedPopulation;
 import org.moeaframework.core.Solution;
@@ -10,6 +11,7 @@ import py.una.pol.dto.NFVdto.Traffic;
 import py.una.pol.dto.ResultGraphMap;
 import py.una.pol.util.Configurations;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -17,30 +19,43 @@ import java.util.Properties;
 public class MOEAService {
     Logger logger = Logger.getLogger(MOEAService.class);
     public void nsgaIII() {
-        VnfService vnfService = new VnfService();
+        //VnfService vnfService = new VnfService();
+        //List<ResultGraphMap> resultGraphMaps = new ArrayList<>();
         TrafficService trafficService = new TrafficService();
-        List<ResultGraphMap> resultGraphMaps = new ArrayList<>();
 
         try {
             Configurations.loadProperties();
             DataService.loadData();
             List<Traffic> traffics = trafficService.readTraffics();
 
-            Properties properties = new Properties();
-            properties.setProperty("populationSize", "20");
-            properties.setProperty("sbx.swap", "true");
+            String[] algorithms = { "NSGAIII", "MOEAD", "RVEA"};
 
+            //setup the experiment
+            Executor executor = new Executor()
+                    .withProblemClass(ProblemService.class)
+                    .withMaxTime(100)
+                    .distributeOnAllCores();
+            //  .withMaxEvaluations(1000);
+
+            Analyzer analyzer = new Analyzer()
+                    .withProblemClass(ProblemService.class)
+                    .includeHypervolume()
+                    .showStatisticalSignificance();
+
+            //run each algorithm for seeds
+            for (String algorithm : algorithms)
+                analyzer.addAll(algorithm, executor.withAlgorithm(algorithm).runSeeds(30));
+
+            //print the results
+            analyzer.printAnalysis();
+
+/*
             NondominatedPopulation result = new Executor()
                     .withProblemClass(ProblemService.class)
                     .withAlgorithm("NSGAIII")
-                    .withProperties(properties)
-                    //  .withMaxEvaluations(1000)
-                    .withMaxTime(10000)
-                    //      .distributeOnAllCores()
+                    .distributeOnAllCores()
+                    .withMaxTime(10)
                     .run();
-
-            // TODO Configurar algoritmo de seleccion, operador de cruce y mutacion
-
             //display the results
             System.out.format("Nro.     Bandwidth       Energy          Delay           Distance        " +
                     "Fragmentation       Licence        LoadTrafic      MaxUseLink      NumberIntances" +
@@ -65,13 +80,15 @@ public class MOEAService {
                         solution.getObjective(11));
 
                 //Cada pareto llama de nuevo a placement para obtener las ubicaciones
-                resultGraphMaps.add(
-                        vnfService.placementGraph(traffics, (Permutation) solution.getVariable(0)));
+        //        resultGraphMaps.add(vnfService.placementGraph(traffics, (Permutation) solution.getVariable(0)));
             }
 
-            logger.info(resultGraphMaps);
+
+      //      logger.info(resultGraphMaps);
+
+ */
         } catch (Exception e) {
-            logger.error("Error en nsgaIII: " + e.getMessage());
+            logger.error("Error: " + e.getMessage());
         }
 
     }

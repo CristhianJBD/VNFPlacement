@@ -18,7 +18,7 @@ public class ProblemService extends AbstractProblem {
          * to include 11 decision variables and 2 objectives.
          */
         public ProblemService() throws Exception {
-            super(1, 12);
+            super(1, 11);
             traffics = TrafficService.traffics;
         }
 
@@ -32,10 +32,8 @@ public class ProblemService extends AbstractProblem {
                     getNumberOfObjectives());
 
             Permutation permutation = new Permutation(Configurations.numberTraffic);
-            for (int i = 0; i < getNumberOfVariables(); i++) {
-                permutation.randomize();
-                solution.setVariable(i, permutation);
-            }
+            permutation.randomize();
+            solution.setVariable(0, permutation);
 
             return solution;
         }
@@ -63,7 +61,7 @@ public class ProblemService extends AbstractProblem {
             f[8] = solutions.getNumberInstances();
             f[9] = solutions.getResourcesCost();
             f[10] = solutions.getSloCost();
-            f[11] = solutions.getThroughput();
+      //      f[11] = solutions.getThroughput();
 
             solution.setObjectives(f);
         }
