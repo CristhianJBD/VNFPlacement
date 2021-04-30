@@ -15,18 +15,22 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 public class MOEAService {
     Logger logger = Logger.getLogger(MOEAService.class);
     public void nsgaIII() {
         //VnfService vnfService = new VnfService();
         //List<ResultGraphMap> resultGraphMaps = new ArrayList<>();
-        TrafficService trafficService = new TrafficService();
+        // TrafficService trafficService = new TrafficService();
 
         try {
             Configurations.loadProperties();
             DataService.loadData();
-            List<Traffic> traffics = trafficService.readTraffics();
+            TrafficService.readTraffics();
+
+            logger.info("Inicio de ejecución: ");
+            long inicioTotal = System.currentTimeMillis();
 
             String[] algorithms = { "NSGAIII", "MOEAD", "RVEA"};
 
@@ -40,15 +44,27 @@ public class MOEAService {
             Analyzer analyzer = new Analyzer()
                     .withProblemClass(ProblemService.class)
                     .includeHypervolume()
+                  //.includeInvertedGenerationalDistance()
                     .showStatisticalSignificance();
 
             //run each algorithm for seeds
-            for (String algorithm : algorithms)
+            for (String algorithm : algorithms) {
+                logger.info("Inicio de ejecución " + algorithm);
+                long inicio = System.currentTimeMillis();
                 analyzer.addAll(algorithm, executor.withAlgorithm(algorithm).runSeeds(30));
+                long fin = System.currentTimeMillis();
+                logger.info("Fin de ejecución " + algorithm + " " + getTime(fin - inicio));
+            }
 
             //print the results
+            long inicio = System.currentTimeMillis();
+            logger.info("Inicio Analysis");
             analyzer.printAnalysis();
+            long fin = System.currentTimeMillis();
+            logger.info("Fin Analysis " + getTime(fin - inicio));
 
+            long finTotal = System.currentTimeMillis();
+            logger.info("Tiempo de ejecución Total: " + getTime(finTotal - inicioTotal));
 /*
             NondominatedPopulation result = new Executor()
                     .withProblemClass(ProblemService.class)
@@ -92,4 +108,18 @@ public class MOEAService {
         }
 
     }
+
+
+    public String getTime(long millis){
+        return String.format("%02d:%02d:%02d",
+                TimeUnit.MILLISECONDS.toHours(millis),
+                TimeUnit.MILLISECONDS.toMinutes(millis) -
+                        TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(millis)), // The change is in this line
+                TimeUnit.MILLISECONDS.toSeconds(millis) -
+                        TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(millis)));
+    }
 }
+
+
+
+

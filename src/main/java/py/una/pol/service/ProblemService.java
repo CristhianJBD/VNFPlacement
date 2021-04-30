@@ -1,6 +1,7 @@
 package py.una.pol.service;
 
 
+import org.apache.log4j.Logger;
 import org.moeaframework.core.Solution;
 import org.moeaframework.core.variable.Permutation;
 import org.moeaframework.problem.AbstractProblem;
@@ -11,13 +12,14 @@ import java.util.List;
 
 
 public class ProblemService extends AbstractProblem {
+        Logger logger = Logger.getLogger(MOEAService.class);
 
         private final List<Traffic> traffics;
     /**
          * Constructs a new instance of the DTLZ2 function, defining it
          * to include 11 decision variables and 2 objectives.
          */
-        public ProblemService() throws Exception {
+        public ProblemService() {
             super(1, 11);
             traffics = TrafficService.traffics;
         }
@@ -48,6 +50,7 @@ public class ProblemService extends AbstractProblem {
             VnfService vnfService = new VnfService();
             double[] f = new double[numberOfObjectives];
             Permutation permutation = (Permutation) solution.getVariable(0);
+
             SolutionTraffic solutions = vnfService.placement(traffics, permutation);
 
             f[0] = solutions.getBandwidth();

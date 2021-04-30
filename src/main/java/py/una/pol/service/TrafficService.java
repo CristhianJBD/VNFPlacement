@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.Random;
 
 public class TrafficService {
-    Logger logger = Logger.getLogger(TrafficService.class);
+    static Logger logger = Logger.getLogger(TrafficService.class);
     public static List<Traffic> traffics = new ArrayList<>();
 
     public List<Traffic> generateRandomtraffic(Map<String, Node> nodesMap, List<Vnf> vnfs) throws Exception {
@@ -139,7 +139,7 @@ public class TrafficService {
         }
     }
 
-    public List<Traffic> readTraffics() throws Exception {
+    public static List<Traffic> readTraffics() throws Exception {
         FileInputStream fileInputStream = null;
         ObjectInputStream objectInputStream = null;
         Gson gson = new Gson();

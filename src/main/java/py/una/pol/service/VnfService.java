@@ -77,19 +77,16 @@ public class VnfService {
                     traffic.setRejectNode(1);
                     traffic.setProcessed(false);
                     traffic.setResultPath(null);
-                    logger.warn(count + "- No Grafo Multi-Estados: " +
-                            "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
+                //    logger.warn(count + "- No Grafo Multi-Estados: " + "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
                 } else {
                     resultPath = provisionTraffic(traffic);
                     traffic.setResultPath(resultPath);
                     if (resultPath == null) {
                         traffic.setProcessed(false);
-                        logger.warn(count + "- No Solucion: " +
-                                "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
+                  //      logger.warn(count + "- No Solucion: " + "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
                     } else {
                         traffic.setProcessed(true);
-                        logger.info(count + "- Solucion: " +
-                                "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
+                    //    logger.info(count + "- Solucion: " + "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
                     }
                 }
                 count++;
