@@ -1,7 +1,6 @@
 package py.una.pol.service;
 
 
-import org.apache.log4j.Logger;
 import org.moeaframework.core.Solution;
 import org.moeaframework.core.variable.Permutation;
 import org.moeaframework.problem.AbstractProblem;
@@ -12,7 +11,6 @@ import java.util.List;
 
 
 public class ProblemService extends AbstractProblem {
-        Logger logger = Logger.getLogger(MOEAService.class);
 
         private final List<Traffic> traffics;
     /**

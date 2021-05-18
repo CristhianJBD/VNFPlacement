@@ -5,25 +5,19 @@ import org.moeaframework.Analyzer;
 import org.moeaframework.Executor;
 import org.moeaframework.core.NondominatedPopulation;
 import org.moeaframework.core.Solution;
-import org.moeaframework.core.operator.TournamentSelection;
 import org.moeaframework.core.variable.Permutation;
 import py.una.pol.dto.NFVdto.Traffic;
 import py.una.pol.dto.ResultGraphMap;
 import py.una.pol.util.Configurations;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
-public class MOEAService {
-    Logger logger = Logger.getLogger(MOEAService.class);
-    public void nsgaIII() {
-        //VnfService vnfService = new VnfService();
-        //List<ResultGraphMap> resultGraphMaps = new ArrayList<>();
-        // TrafficService trafficService = new TrafficService();
+public class MaOEAService {
+    Logger logger = Logger.getLogger(MaOEAService.class);
 
+    public void maoea() {
         try {
             Configurations.loadProperties();
             DataService.loadData();
@@ -65,13 +59,28 @@ public class MOEAService {
 
             long finTotal = System.currentTimeMillis();
             logger.info("Tiempo de ejecución Total: " + getTime(finTotal - inicioTotal));
-/*
+
+        } catch (Exception e) {
+            logger.error("Error: " + e.getMessage());
+        }
+
+    }
+
+    public void nsga3() throws Exception {
+        Configurations.loadProperties();
+        DataService.loadData();
+        VnfService vnfService = new VnfService();
+        List<ResultGraphMap> resultGraphMaps = new ArrayList<>();
+
+        List<Traffic> traffics =  TrafficService.readTraffics();
+
             NondominatedPopulation result = new Executor()
                     .withProblemClass(ProblemService.class)
                     .withAlgorithm("NSGAIII")
                     .distributeOnAllCores()
                     .withMaxTime(10)
                     .run();
+
             //display the results
             System.out.format("Nro.     Bandwidth       Energy          Delay           Distance        " +
                     "Fragmentation       Licence        LoadTrafic      MaxUseLink      NumberIntances" +
@@ -96,17 +105,9 @@ public class MOEAService {
                         solution.getObjective(11));
 
                 //Cada pareto llama de nuevo a placement para obtener las ubicaciones
-        //        resultGraphMaps.add(vnfService.placementGraph(traffics, (Permutation) solution.getVariable(0)));
+                resultGraphMaps.add(vnfService.placementGraph(traffics, (Permutation) solution.getVariable(0)));
             }
-
-
-      //      logger.info(resultGraphMaps);
-
- */
-        } catch (Exception e) {
-            logger.error("Error: " + e.getMessage());
-        }
-
+            logger.info(resultGraphMaps);
     }
 
 

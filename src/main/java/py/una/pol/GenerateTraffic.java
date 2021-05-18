@@ -4,7 +4,7 @@ import py.una.pol.service.DataService;
 import py.una.pol.service.TrafficService;
 import py.una.pol.util.Configurations;
 
-public class Traffic {
+public class GenerateTraffic {
 
     public static void main(String[] args) throws Exception {
 

@@ -1,14 +1,14 @@
 package py.una.pol;
 
 
-import py.una.pol.service.MOEAService;
+import py.una.pol.service.MaOEAService;
 
 public class Main {
 
     public static void main(String[] args) {
 
-        MOEAService nsgaiiiService = new MOEAService();
-        nsgaiiiService.nsgaIII();
+        MaOEAService maOEAService = new MaOEAService();
+        maOEAService.maoea();
     }
 
 }
