@@ -282,8 +282,8 @@ public class VnfService {
                     if (recursion(originNodeId, traffic, bandwidtCurrent, indexVnf + 1, pathNodeIds, serverVnf, nodesMapAux, linksMapAux))
                         return true;
                     else {
-                        pathNodeIds.remove(indexVnf - 1);
-                        serverVnf.remove(indexVnf - 1);
+                        pathNodeIds.remove(indexVnf);
+                        serverVnf.remove(indexVnf);
                     }
                 }
                 nodesMapAux = loadNodesMapAux(nodesMap);

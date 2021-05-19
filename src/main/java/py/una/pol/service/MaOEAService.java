@@ -85,7 +85,7 @@ public class MaOEAService {
                     .withProblemClass(ProblemService.class)
                     .withAlgorithm("NSGAIII")
                     .distributeOnAllCores()
-                    .withMaxTime(10)
+                    .withMaxTime(1000)
                     .run();
 
             //display the results
