@@ -33,10 +33,13 @@ public class VnfServiceRandom {
             shortestPathMap = DataService.shortestPathMap;
             vnfSharedMap = DataService.vnfsShared;
 
-            if (Configurations.trafficsRandom)
-                traffics = trafficService.generateRandomtraffic(DataService.nodesMap, DataService.vnfs);
+            if (Configurations.trafficsReadFile)
+                traffics = TrafficService.readTraffics();
             else
-                traffics = trafficService.generateAllToAlltraffic(DataService.nodesMap, DataService.vnfs);
+                if (Configurations.trafficsRandom)
+                    traffics = trafficService.generateRandomtraffic(DataService.nodesMap, DataService.vnfs);
+                else
+                    traffics = trafficService.generateAllToAlltraffic(DataService.nodesMap, DataService.vnfs);
 
             for (int i = 1; i <= Configurations.numberSolutions; i++) {
                 nodesMap = loadNodesMapAux(DataService.nodesMap);

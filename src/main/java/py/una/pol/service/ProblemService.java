@@ -18,7 +18,7 @@ public class ProblemService extends AbstractProblem {
          * to include 11 decision variables and 2 objectives.
          */
         public ProblemService() {
-            super(1, 11);
+            super(1, 12);
             traffics = TrafficService.traffics;
         }
 
@@ -62,7 +62,7 @@ public class ProblemService extends AbstractProblem {
             f[8] = solutions.getNumberInstances();
             f[9] = solutions.getResourcesCost();
             f[10] = solutions.getSloCost();
-      //      f[11] = solutions.getThroughput();
+            f[11] = solutions.getThroughput();
 
             solution.setObjectives(f);
         }

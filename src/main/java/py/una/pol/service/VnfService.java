@@ -8,7 +8,6 @@ import org.jgrapht.graph.DefaultDirectedGraph;
 import org.moeaframework.core.variable.Permutation;
 import py.una.pol.dto.*;
 import py.una.pol.dto.NFVdto.*;
-import py.una.pol.util.Configurations;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -77,16 +76,16 @@ public class VnfService {
                     traffic.setRejectNode(1);
                     traffic.setProcessed(false);
                     traffic.setResultPath(null);
-                //    logger.warn(count + "- No Grafo Multi-Estados: " + "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
+                    //    logger.warn(count + "- No Grafo Multi-Estados: " + "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
                 } else {
                     resultPath = provisionTraffic(traffic);
                     traffic.setResultPath(resultPath);
                     if (resultPath == null) {
                         traffic.setProcessed(false);
-                  //      logger.warn(count + "- No Solucion: " + "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
+                        //      logger.warn(count + "- No Solucion: " + "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
                     } else {
                         traffic.setProcessed(true);
-                    //    logger.info(count + "- Solucion: " + "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
+                        //    logger.info(count + "- Solucion: " + "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
                     }
                 }
                 count++;
@@ -245,52 +244,56 @@ public class VnfService {
         ShortestPath shortestPath;
         List<Cost> costs;
         String destinyNodeId;
+        try {
+            if (traffic.getSfc().getVnfs().size() == indexVnf) {
+                Set<KPath> links = graphMultiStage.outgoingEdgesOf(originNodeId);
+                destinyNodeId = graphMultiStage.getEdgeTarget(links.iterator().next());
 
-        if (traffic.getSfc().getVnfs().size() == indexVnf) {
-            Set<KPath> links = graphMultiStage.outgoingEdgesOf(originNodeId);
-            destinyNodeId = graphMultiStage.getEdgeTarget(links.iterator().next());
+                if (traffic.getNodeDestinyId().equals(destinyNodeId)) {
+                    for (ShortestPath shortestPathLast : links.iterator().next().getKShortestPath()) {
+                        if (isResourceAvailableLink(originNodeId, destinyNodeId,
+                                bandwidtCurrent, linksMapAux, nodesMapAux, shortestPathLast, traffic)) {
+                            pathNodeIds.add(new Path(originNodeId, destinyNodeId, shortestPathLast));
+                            updateGraphMap(nodesMapAux, linksMapAux);
+                            return true;
+                        } else
+                            linksMapAux = loadLinkMapAux(linksMap);
+                    }
+                    return false;
+                }
+            }
+            Vnf vnf = traffic.getSfc().getVnfs().get(indexVnf);
+            //Normaliza los costos y guarda en un atributo
+            costs = normalizeCosts(vnf, originNodeId, bandwidtCurrent, nodesMapAux, linksMapAux);
 
-            if (traffic.getNodeDestinyId().equals(destinyNodeId)) {
-                for(ShortestPath shortestPathLast : links.iterator().next().getKShortestPath()) {
-                    if (isResourceAvailableLink(originNodeId, destinyNodeId,
-                            bandwidtCurrent, linksMapAux, nodesMapAux, shortestPathLast, traffic)) {
-                        pathNodeIds.add(new Path(originNodeId, destinyNodeId, shortestPathLast));
-                        updateGraphMap(nodesMapAux, linksMapAux);
+            //Se ordena de acuerdo al valor normalizado
+            costs = costs.stream().sorted(Comparator.comparing(Cost::getCostNormalized)).collect(Collectors.toList());
+
+            for (Cost destinyCosts : costs) {
+                destinyNodeId = destinyCosts.getId();
+                shortestPath = destinyCosts.getShortestPath();
+
+                if (isResourceAvailableGraph(vnf, nodesMapAux, linksMapAux, shortestPath, bandwidtCurrent)) {
+                    bandwidtCurrent = vnfSharedMap.get(vnf.getId()).getBandwidthFactor() * bandwidtCurrent;
+                    pathNodeIds.add(new Path(originNodeId, destinyNodeId, shortestPath));
+                    serverVnf.add(destinyNodeId);
+                    originNodeId = destinyNodeId;
+
+                    if (recursion(originNodeId, traffic, bandwidtCurrent, indexVnf + 1, pathNodeIds, serverVnf, nodesMapAux, linksMapAux))
                         return true;
-                    } else
-                        linksMapAux = loadLinkMapAux(linksMap);
+                    else {
+                        pathNodeIds.remove(indexVnf - 1);
+                        serverVnf.remove(indexVnf - 1);
+                    }
                 }
-                return false;
+                nodesMapAux = loadNodesMapAux(nodesMap);
+                linksMapAux = loadLinkMapAux(linksMap);
             }
+            return false;
+        } catch (Exception e) {
+            logger.error("Error en recursion:" + e.getMessage());
+            throw new Exception();
         }
-        Vnf vnf = traffic.getSfc().getVnfs().get(indexVnf);
-        //Normaliza los costos y guarda en un atributo
-        costs = normalizeCosts(vnf, originNodeId, bandwidtCurrent, nodesMapAux, linksMapAux);
-
-        //Se ordena de acuerdo al valor normalizado
-        costs = costs.stream().sorted(Comparator.comparing(Cost::getCostNormalized)).collect(Collectors.toList());
-
-        for (Cost destinyCosts : costs) {
-            destinyNodeId = destinyCosts.getId();
-            shortestPath = destinyCosts.getShortestPath();
-
-            if (isResourceAvailableGraph(vnf, nodesMapAux, linksMapAux, shortestPath, bandwidtCurrent)) {
-                bandwidtCurrent = vnfSharedMap.get(vnf.getId()).getBandwidthFactor() * bandwidtCurrent;
-                pathNodeIds.add(new Path(originNodeId, destinyNodeId, shortestPath));
-                serverVnf.add(destinyNodeId);
-                originNodeId = destinyNodeId;
-
-                if (recursion(originNodeId, traffic, bandwidtCurrent, indexVnf + 1, pathNodeIds, serverVnf, nodesMapAux, linksMapAux))
-                    return true;
-                else {
-                    pathNodeIds.remove(indexVnf - 1);
-                    serverVnf.remove(indexVnf - 1);
-                }
-            }
-            nodesMapAux = loadNodesMapAux(nodesMap);
-            linksMapAux = loadLinkMapAux(linksMap);
-        }
-        return false;
     }
 
     private VnfShared installVNF(Server server, Vnf vnf) throws Exception {
@@ -329,7 +332,8 @@ public class VnfService {
     private boolean isResourceAvailableLink(String nodeOriginId, String nodeDestinyId, double bandwidtCurrent,
                                             Map<String, Link> linksMapAux, Map<String, Node> nodesMapAux,
                                             ShortestPath shortestPath, Traffic traffic) throws Exception {
-        Link link;Node node;
+        Link link;
+        Node node;
         double bandwidtUsed;
         try {
             if (!nodeDestinyId.equals(nodeOriginId)) {
@@ -417,13 +421,13 @@ public class VnfService {
     private List<Traffic> loadTraffics(List<Traffic> traffics) throws Exception {
         List<Traffic> trafficsAux = new ArrayList<>();
         Traffic trafficAux;
-        try{
-            for(Traffic traffic : traffics){
+        try {
+            for (Traffic traffic : traffics) {
                 trafficAux = new Traffic(traffic);
                 trafficsAux.add(trafficAux);
             }
             return trafficsAux;
-        }catch (Exception e){
+        } catch (Exception e) {
             logger.error("Error en loadTraffics: " + e.getMessage());
             throw new Exception();
         }
@@ -449,7 +453,7 @@ public class VnfService {
 
         boolean result = isResourceAvailableGraph(vnf, nodesMapAux, linksMapAux, shortestPath, bandwidtCurrent);
 
-        if(result)
+        if (result)
             return ofs.costTotalFOs(nodesMapAux, linksMapAux);
         else
             return null;
@@ -543,7 +547,7 @@ public class VnfService {
             for (int k = 0; k < kShortestPath.size(); k++) {
                 shortestPath = kShortestPath.get(k);
                 Cost resultCost = calculateCosts(vnf, shortestPath, bandwidtCurrent, nodesMap, linksMap);
-                if(resultCost != null) {
+                if (resultCost != null) {
                     resultCost.setId(destinyNodeId);
                     resultCost.setShortestPath(shortestPath);
                     costs.add(resultCost);
@@ -551,7 +555,7 @@ public class VnfService {
             }
         }
 
-        if(costs.size() > 0) {
+        if (costs.size() > 0) {
             double maxEnergy = costs.stream().mapToDouble(Cost::getEnergy)
                     .max().orElseThrow(NoSuchElementException::new);
             double minEnergy = costs.stream().mapToDouble(Cost::getEnergy)

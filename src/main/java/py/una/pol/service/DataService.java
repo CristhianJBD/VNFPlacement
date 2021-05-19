@@ -58,6 +58,7 @@ public class DataService {
         try {
             reader = new BufferedReader(new FileReader(System.getProperty("app.home") + Configurations.vnfsShareFileName));
 
+            int i = 1;
             reader.readLine();
             while ((vnfLine = reader.readLine()) != null) {
                 vnfSplit = vnfLine.split(" ");
@@ -72,7 +73,7 @@ public class DataService {
                 vnfShared.setResourceRAM(Integer.parseInt(vnfSplit[6]));
                 vnfShared.setResourceStorage(Integer.parseInt(vnfSplit[7]));
 
-                logger.info(vnfShared.toString());
+                logger.info(i++ + " " + vnfShared.toString());
                 vnfsShared.put(vnfShared.getId(), vnfShared);
             }
 
@@ -97,6 +98,7 @@ public class DataService {
         try {
             reader = new BufferedReader(new FileReader(System.getProperty("app.home") + Configurations.vnfsSfcFileName));
 
+            int i = 1;
             reader.readLine();
             while ((vnfLine = reader.readLine()) != null) {
                 vnfSplit = vnfLine.split(" ");
@@ -107,7 +109,7 @@ public class DataService {
                 vnf.setResourceCPU(Integer.parseInt(vnfSplit[2]));
                 vnf.setResourceRAM(Integer.parseInt(vnfSplit[3]));
 
-                logger.info(vnf.toString());
+                logger.info(i++ + " " + vnf.toString());
                 vnfs.add(vnf);
             }
 
@@ -134,6 +136,7 @@ public class DataService {
             reader = new BufferedReader(new FileReader(System.getProperty("app.home") +
                     Configurations.networkPackage + Configurations.serversFileName));
 
+            int i = 1;
             reader.readLine();
             while ((serverLine = reader.readLine()) != null) {
                 serverSplit = serverLine.split(" ");
@@ -151,7 +154,7 @@ public class DataService {
                 server.setEnergyIdleWatts(Integer.parseInt(serverSplit[9]));
                 server.setEnergyPeakWatts(Integer.parseInt(serverSplit[10]));
 
-                logger.info(server.toString());
+                logger.info(i++ + " " + server.toString());
                 servers.put(server.getId(), server);
             }
 
@@ -178,6 +181,7 @@ public class DataService {
             reader = new BufferedReader(new FileReader(System.getProperty("app.home") +
                     Configurations.networkPackage + Configurations.nodesFileName));
 
+            int i = 1;
             reader.readLine();
             while ((nodeString = reader.readLine()) != null) {
                 splitNode = nodeString.split(" ");
@@ -187,7 +191,7 @@ public class DataService {
                 node.setEnergyCost(Double.parseDouble(splitNode[1].trim()));
                 node.setServer(servers.get(splitNode[2].trim()));
 
-                logger.info(node.toString());
+                logger.info(i++ + " " + node.toString());
                 nodesMap.put(node.getId(), node);
                 nodes.put(node.getId(), node);
             }
@@ -232,6 +236,7 @@ public class DataService {
                 graph.addVertex(node);
 
             logger.info("Enlaces: ");
+            int i = 1;
             for (String linkString : linksString) {
                 String[] linkSplit = linkString.split(" ");
 
@@ -243,7 +248,7 @@ public class DataService {
                 link.setBandwidthCost(Double.parseDouble(linkSplit[5]));
 
                 linksMap.put(link.getId(), link);
-                logger.info(link.toString());
+                logger.info(i++ + " " + link.toString());
                 graph.addEdge(nodes.get(linkSplit[0]), nodes.get(linkSplit[1]), link);
             }
             logger.info("Grafo: ");

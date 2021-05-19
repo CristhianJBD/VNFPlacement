@@ -37,15 +37,22 @@ public class MaOEAService {
 
             Analyzer analyzer = new Analyzer()
                     .withProblemClass(ProblemService.class)
-                    .includeHypervolume()
-                  //.includeInvertedGenerationalDistance()
+                    .includeGenerationalDistance()
+                    .includeInvertedGenerationalDistance()
+                    .includeMaximumParetoFrontError()
+                    .includeAdditiveEpsilonIndicator()
+                    .includeContribution()
+                    .includeSpacing()
+                    .includeR1()
+                    .includeR2()
+                    .includeR3()
                     .showStatisticalSignificance();
 
             //run each algorithm for seeds
             for (String algorithm : algorithms) {
                 logger.info("Inicio de ejecución " + algorithm);
                 long inicio = System.currentTimeMillis();
-                analyzer.addAll(algorithm, executor.withAlgorithm(algorithm).runSeeds(30));
+                analyzer.addAll(algorithm, executor.withAlgorithm(algorithm).runSeeds(2));
                 long fin = System.currentTimeMillis();
                 logger.info("Fin de ejecución " + algorithm + " " + getTime(fin - inicio));
             }
@@ -105,9 +112,9 @@ public class MaOEAService {
                         solution.getObjective(11));
 
                 //Cada pareto llama de nuevo a placement para obtener las ubicaciones
-                resultGraphMaps.add(vnfService.placementGraph(traffics, (Permutation) solution.getVariable(0)));
+             //   resultGraphMaps.add(vnfService.placementGraph(traffics, (Permutation) solution.getVariable(0)));
             }
-            logger.info(resultGraphMaps);
+           // logger.info(resultGraphMaps);
     }
 
 
