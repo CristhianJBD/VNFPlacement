@@ -5,7 +5,6 @@ import org.moeaframework.Analyzer;
 import org.moeaframework.Executor;
 import org.moeaframework.core.NondominatedPopulation;
 import org.moeaframework.core.Solution;
-import org.moeaframework.core.variable.Permutation;
 import py.una.pol.dto.NFVdto.Traffic;
 import py.una.pol.dto.ResultGraphMap;
 import py.una.pol.util.Configurations;

@@ -245,6 +245,7 @@ public class VnfService {
         List<Cost> costs;
         String destinyNodeId;
         try {
+            //Cuando indexVnf es igual a la cantidad de vnfs, se intenta llegar al nodo destino del trafico
             if (traffic.getSfc().getVnfs().size() == indexVnf) {
                 Set<KPath> links = graphMultiStage.outgoingEdgesOf(originNodeId);
                 destinyNodeId = graphMultiStage.getEdgeTarget(links.iterator().next());
@@ -263,12 +264,13 @@ public class VnfService {
                 }
             }
             Vnf vnf = traffic.getSfc().getVnfs().get(indexVnf);
-            //Normaliza los costos y guarda en un atributo
+            //Normaliza los costos(Energy, Bandwidth, Delay, Distance, Instances, Resources, Licences, Fragmentation, MaximunUseLink) y guarda en un atributo
             costs = normalizeCosts(vnf, originNodeId, bandwidtCurrent, nodesMapAux, linksMapAux);
 
-            //Se ordena de acuerdo al valor normalizado
+            //Se ordena de forma ascendente de acuerdo al valor normalizado
             costs = costs.stream().sorted(Comparator.comparing(Cost::getCostNormalized)).collect(Collectors.toList());
 
+            //Se recorre los nodos destinos de forma ascendente de acuerdo a los costos normalizados
             for (Cost destinyCosts : costs) {
                 destinyNodeId = destinyCosts.getId();
                 shortestPath = destinyCosts.getShortestPath();
@@ -286,6 +288,7 @@ public class VnfService {
                         serverVnf.remove(indexVnf);
                     }
                 }
+                //Si no se puede colocar, se limpian los nodos y links de acuerdo a como estaban al entrar en la recursion
                 nodesMapAux = loadNodesMapAux(nodesMap);
                 linksMapAux = loadLinkMapAux(linksMap);
             }
@@ -509,6 +512,7 @@ public class VnfService {
             } else {
                 return false;
             }
+            //Verificar recursos en el enlace que llega al destino del trafico
             if (!nodeDestinyId.equals(nodeOriginId)) {
                 for (String linkId : shortestPath.getLinks()) {
                     link = linksMapAux.get(linkId);
