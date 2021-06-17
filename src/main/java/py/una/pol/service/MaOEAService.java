@@ -25,7 +25,8 @@ public class MaOEAService {
             logger.info("Inicio de ejecución: ");
             long inicioTotal = System.currentTimeMillis();
 
-            String[] algorithms = { "NSGAIII", "MOEAD", "RVEA"};
+            //String[] algorithms = { "NSGAIII", "MOEAD", "RVEA"};
+            String[] algorithms = { "NSGAIII"};
 
             //setup the experiment
             Executor executor = new Executor()
@@ -36,22 +37,20 @@ public class MaOEAService {
 
             Analyzer analyzer = new Analyzer()
                     .withProblemClass(ProblemService.class)
-                    .includeGenerationalDistance()
-                    .includeInvertedGenerationalDistance()
-                    .includeMaximumParetoFrontError()
-                    .includeAdditiveEpsilonIndicator()
-                    .includeContribution()
-                    .includeSpacing()
-                    .includeR1()
-                    .includeR2()
-                    .includeR3()
+                    .includeHypervolume()
                     .showStatisticalSignificance();
 
             //run each algorithm for seeds
             for (String algorithm : algorithms) {
                 logger.info("Inicio de ejecución " + algorithm);
                 long inicio = System.currentTimeMillis();
-                analyzer.addAll(algorithm, executor.withAlgorithm(algorithm).runSeeds(2));
+
+                int seed = 1;
+                List<NondominatedPopulation> results = executor.withAlgorithm(algorithm).runSeeds(1);
+                for(NondominatedPopulation result : results)
+                    logger.info("Frente pareto (seed) " + seed++ + ": " + result.size() + " soluciones");
+
+                analyzer.addAll(algorithm, results);
                 long fin = System.currentTimeMillis();
                 logger.info("Fin de ejecución " + algorithm + " " + getTime(fin - inicio));
             }
@@ -84,7 +83,7 @@ public class MaOEAService {
                     .withProblemClass(ProblemService.class)
                     .withAlgorithm("NSGAIII")
                     .distributeOnAllCores()
-                    .withMaxTime(1000)
+                    .withMaxTime(100)
                     .run();
 
             //display the results
