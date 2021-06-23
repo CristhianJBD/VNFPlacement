@@ -4,19 +4,16 @@ import org.apache.log4j.Logger;
 import org.moeaframework.Analyzer;
 import org.moeaframework.Executor;
 import org.moeaframework.core.NondominatedPopulation;
-import org.moeaframework.core.Solution;
 import py.una.pol.dto.NFVdto.Traffic;
-import py.una.pol.dto.ResultGraphMap;
 import py.una.pol.util.Configurations;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class MaOEAService {
     Logger logger = Logger.getLogger(MaOEAService.class);
 
-    public void maoea() {
+    public void maoeaMetrics() {
         try {
             Configurations.loadProperties();
             DataService.loadData();
@@ -38,6 +35,7 @@ public class MaOEAService {
             Analyzer analyzer = new Analyzer()
                     .withProblemClass(ProblemService.class)
                     .includeHypervolume()
+                    .includeContribution()
                     .showStatisticalSignificance();
 
             //run each algorithm for seeds
@@ -71,21 +69,32 @@ public class MaOEAService {
 
     }
 
-    public void nsga3() throws Exception {
+    public void maoeaSolutions() throws Exception {
         Configurations.loadProperties();
         DataService.loadData();
-        VnfService vnfService = new VnfService();
-        List<ResultGraphMap> resultGraphMaps = new ArrayList<>();
 
         List<Traffic> traffics =  TrafficService.readTraffics();
 
-            NondominatedPopulation result = new Executor()
+        String algorithm = "NSGAIII";
+        logger.info("Inicio de ejecución " + algorithm);
+        long inicio = System.currentTimeMillis();
+
+        NondominatedPopulation result = new Executor()
                     .withProblemClass(ProblemService.class)
-                    .withAlgorithm("NSGAIII")
+                    .withAlgorithm(algorithm)
                     .distributeOnAllCores()
-                    .withMaxTime(100)
+                    .withMaxTime(1200000)
                     .run();
 
+        long fin = System.currentTimeMillis();
+
+        logger.info("Fin de ejecución " + algorithm);
+        logger.info("Frente pareto: " + result.size() + " soluciones");
+        logger.info("Tiempo de ejecución: " + getTime(fin - inicio));
+
+  /*
+          VnfService vnfService = new VnfService();
+          List<ResultGraphMap> resultGraphMaps = new ArrayList<>();
             //display the results
             System.out.format("Nro.     Bandwidth       Energy          Delay           Distance        " +
                     "Fragmentation       Licence        LoadTrafic      MaxUseLink      NumberIntances" +
@@ -113,6 +122,7 @@ public class MaOEAService {
              //   resultGraphMaps.add(vnfService.placementGraph(traffics, (Permutation) solution.getVariable(0)));
             }
            // logger.info(resultGraphMaps);
+   */
     }
 
 
