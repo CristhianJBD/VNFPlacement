@@ -4,6 +4,7 @@ import org.apache.log4j.Logger;
 import org.moeaframework.Analyzer;
 import org.moeaframework.Executor;
 import org.moeaframework.core.NondominatedPopulation;
+import org.moeaframework.core.Solution;
 import py.una.pol.dto.NFVdto.Traffic;
 import py.una.pol.util.Configurations;
 
@@ -22,20 +23,25 @@ public class MaOEAService {
             logger.info("Inicio de ejecución: ");
             long inicioTotal = System.currentTimeMillis();
 
-            //String[] algorithms = { "NSGAIII", "MOEAD", "RVEA"};
-            String[] algorithms = { "NSGAIII"};
+            String[] algorithms = { "NSGAIII", "MOEAD", "RVEA"};
 
             //setup the experiment
             Executor executor = new Executor()
                     .withProblemClass(ProblemService.class)
-                    .withMaxTime(100)
+                    .withMaxTime(600000)
                     .distributeOnAllCores();
             //  .withMaxEvaluations(1000);
 
             Analyzer analyzer = new Analyzer()
                     .withProblemClass(ProblemService.class)
-                    .includeHypervolume()
-                    .includeContribution()
+                    .includeGenerationalDistance()
+                    .includeInvertedGenerationalDistance()
+                    .includeMaximumParetoFrontError()
+                    .includeAdditiveEpsilonIndicator()
+                    .includeSpacing()
+                    .includeR1()
+                    .includeR2()
+                    .includeR3()
                     .showStatisticalSignificance();
 
             //run each algorithm for seeds
@@ -44,7 +50,7 @@ public class MaOEAService {
                 long inicio = System.currentTimeMillis();
 
                 int seed = 1;
-                List<NondominatedPopulation> results = executor.withAlgorithm(algorithm).runSeeds(1);
+                List<NondominatedPopulation> results = executor.withAlgorithm(algorithm).runSeeds(30);
                 for(NondominatedPopulation result : results)
                     logger.info("Frente pareto (seed) " + seed++ + ": " + result.size() + " soluciones");
 
@@ -83,7 +89,7 @@ public class MaOEAService {
                     .withProblemClass(ProblemService.class)
                     .withAlgorithm(algorithm)
                     .distributeOnAllCores()
-                    .withMaxTime(1200000)
+                    .withMaxTime(600000)
                     .run();
 
         long fin = System.currentTimeMillis();
@@ -92,7 +98,13 @@ public class MaOEAService {
         logger.info("Frente pareto: " + result.size() + " soluciones");
         logger.info("Tiempo de ejecución: " + getTime(fin - inicio));
 
-  /*
+        logger.info("Throughput: ");
+        int i = 1;
+        for (Solution solution : result) {
+            logger.info(i++ + ") " + solution.getObjective(11));
+        }
+
+        /*
           VnfService vnfService = new VnfService();
           List<ResultGraphMap> resultGraphMaps = new ArrayList<>();
             //display the results
@@ -122,7 +134,7 @@ public class MaOEAService {
              //   resultGraphMaps.add(vnfService.placementGraph(traffics, (Permutation) solution.getVariable(0)));
             }
            // logger.info(resultGraphMaps);
-   */
+    */
     }
 
 
