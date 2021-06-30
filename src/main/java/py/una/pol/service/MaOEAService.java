@@ -23,7 +23,7 @@ public class MaOEAService {
             logger.info("Inicio de ejecución: ");
             long inicioTotal = System.currentTimeMillis();
 
-            String[] algorithms = { "NSGAIII", "MOEAD", "RVEA"};
+            String[] algorithms = {"NSGAIII", "MOEAD", "RVEA"};
 
             //setup the experiment
             Executor executor = new Executor()
@@ -51,7 +51,7 @@ public class MaOEAService {
 
                 int seed = 1;
                 List<NondominatedPopulation> results = executor.withAlgorithm(algorithm).runSeeds(30);
-                for(NondominatedPopulation result : results)
+                for (NondominatedPopulation result : results)
                     logger.info("Frente pareto (seed) " + seed++ + ": " + result.size() + " soluciones");
 
                 analyzer.addAll(algorithm, results);
@@ -79,18 +79,18 @@ public class MaOEAService {
         Configurations.loadProperties();
         DataService.loadData();
 
-        List<Traffic> traffics =  TrafficService.readTraffics();
+        List<Traffic> traffics = TrafficService.readTraffics();
 
         String algorithm = "NSGAIII";
         logger.info("Inicio de ejecución " + algorithm);
         long inicio = System.currentTimeMillis();
 
         NondominatedPopulation result = new Executor()
-                    .withProblemClass(ProblemService.class)
-                    .withAlgorithm(algorithm)
-                    .distributeOnAllCores()
-                    .withMaxTime(600000)
-                    .run();
+                .withProblemClass(ProblemService.class)
+                .withAlgorithm(algorithm)
+                .distributeOnAllCores()
+                .withMaxTime(600000)
+                .run();
 
         long fin = System.currentTimeMillis();
 
@@ -104,9 +104,10 @@ public class MaOEAService {
             logger.info(i++ + ") " + solution.getObjective(11));
         }
 
-        /*
-          VnfService vnfService = new VnfService();
-          List<ResultGraphMap> resultGraphMaps = new ArrayList<>();
+
+/*
+       VnfService vnfService = new VnfService();
+       List<ResultGraphMap> resultGraphMaps = new ArrayList<>();
             //display the results
             System.out.format("Nro.     Bandwidth       Energy          Delay           Distance        " +
                     "Fragmentation       Licence        LoadTrafic      MaxUseLink      NumberIntances" +
@@ -134,11 +135,11 @@ public class MaOEAService {
              //   resultGraphMaps.add(vnfService.placementGraph(traffics, (Permutation) solution.getVariable(0)));
             }
            // logger.info(resultGraphMaps);
-    */
+*/
     }
 
 
-    public String getTime(long millis){
+    public String getTime(long millis) {
         return String.format("%02d:%02d:%02d",
                 TimeUnit.MILLISECONDS.toHours(millis),
                 TimeUnit.MILLISECONDS.toMinutes(millis) -
