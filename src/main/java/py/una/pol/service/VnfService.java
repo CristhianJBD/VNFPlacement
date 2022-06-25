@@ -1,15 +1,25 @@
 package py.una.pol.service;
 
+import com.mxgraph.layout.mxCircleLayout;
+import com.mxgraph.layout.mxIGraphLayout;
+import com.mxgraph.util.mxCellRenderer;
 import org.apache.log4j.Logger;
 import org.jgrapht.DirectedGraph;
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
+import org.jgrapht.ext.JGraphXAdapter;
 import org.jgrapht.graph.DefaultDirectedGraph;
 import org.moeaframework.core.variable.Permutation;
 import py.una.pol.dto.*;
 import py.una.pol.dto.NFVdto.*;
 
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.util.*;
+import java.util.List;
 import java.util.stream.Collectors;
 
 
@@ -72,6 +82,7 @@ public class VnfService {
                 traffic.setRejectLink(0);
                 traffic.setRejectNode(0);
                 graphMultiStage = createGraphtMultiStage(traffic);
+                this.graphToImage(graphMultiStage);
                 if (graphMultiStage == null) {
                     traffic.setRejectNode(1);
                     traffic.setProcessed(false);
@@ -631,6 +642,19 @@ public class VnfService {
         if (max == min)
             return 0;
         return (x - min) / (max - min);
+    }
+
+    public void graphToImage(DirectedGraph<String, KPath> graphMultiStage) throws IOException {
+
+        JGraphXAdapter<String, KPath> graphAdapter =
+                new JGraphXAdapter<String, KPath>(graphMultiStage);
+        mxIGraphLayout layout = new mxCircleLayout(graphAdapter);
+        layout.execute(graphAdapter.getDefaultParent());
+
+        BufferedImage image =
+                mxCellRenderer.createBufferedImage(graphAdapter, null, 2, Color.WHITE, true, null);
+        File imgFile = new File("/home/cristhianjbd/Desktop/graph.png");
+        ImageIO.write(image, "PNG", imgFile);
     }
 
 }

@@ -1,0 +1,5 @@
+#[Servidor(Id)] [Costo Licencia(Dolar) sin cita] [Costo Deployar(Dolar) Aprox 100] [Cantidad Cores - cite 469] [Cantidad RAM(GB) cite 426] [Cantidad Almacenaiento(GB) Aprox 1TB][Costo x Cores(Dolar)Aprox 0.06] [Costo x GB RAM(Dolar) Aprox 0.03] [Costo x GB Almacenamiento(Dolar)Aprox 0.01] [Cantidad IDLE Energia(Watts) cite 187] [Cantidad Maxima Energia(Watts) cite 187]
+server1 85 2 8 32 100 0.06 0.03 0.01 80 2735
+server2 100 3 8 16 106 0.07 0.04 0.02 100 3000
+server3 110 2 10 32 124 0.08 0.035 0.02 85 3500
+server4 90 1 4 16 130 0.075 0.048 0.01 94 2735

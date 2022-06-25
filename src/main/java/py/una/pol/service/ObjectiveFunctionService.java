@@ -144,10 +144,12 @@ public class ObjectiveFunctionService {
         int deployCost = 0;
         try {
             //Suma del costo de deployar los VNFs en los servidores
-            for (Server server : servers)
+            for (Server server : servers){
+                deployCost = deployCost + server.getDeploy();
                 for(List<VnfShared> vnfsShared : server.getVnfs().values())
                     for(VnfShared vnfShared : vnfsShared)
-                        deployCost = deployCost + vnfShared.getDeploy() + server.getDeploy();
+                        deployCost = deployCost + vnfShared.getDeploy();
+            }
 
             return deployCost;
         } catch (Exception e) {

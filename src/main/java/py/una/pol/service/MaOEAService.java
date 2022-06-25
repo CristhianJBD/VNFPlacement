@@ -5,9 +5,13 @@ import org.moeaframework.Analyzer;
 import org.moeaframework.Executor;
 import org.moeaframework.core.NondominatedPopulation;
 import org.moeaframework.core.Solution;
+import org.moeaframework.core.variable.Permutation;
 import py.una.pol.dto.NFVdto.Traffic;
+import py.una.pol.dto.ResultGraphMap;
+import py.una.pol.dto.SolutionTraffic;
 import py.una.pol.util.Configurations;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -105,7 +109,7 @@ public class MaOEAService {
         }
 
 
-/*
+
        VnfService vnfService = new VnfService();
        List<ResultGraphMap> resultGraphMaps = new ArrayList<>();
             //display the results
@@ -113,9 +117,9 @@ public class MaOEAService {
                     "Fragmentation       Licence        LoadTrafic      MaxUseLink      NumberIntances" +
                     "    Resources     SLO        Throughput%n");
 
-            int i = 1;
+            int j = 1;
             for (Solution solution : result) {
-                System.out.format(i++ + "       %.4f        %.4f        %.4f        %.4f        %.4f" +
+                System.out.format(j++ + "       %.4f        %.4f        %.4f        %.4f        %.4f" +
                                 "       %.4f        %.4f        %.4f        %.4f        %.4f" +
                                 "       %.4f        %.4f%n",
                         solution.getObjective(0),
@@ -132,10 +136,9 @@ public class MaOEAService {
                         solution.getObjective(11));
 
                 //Cada pareto llama de nuevo a placement para obtener las ubicaciones
-             //   resultGraphMaps.add(vnfService.placementGraph(traffics, (Permutation) solution.getVariable(0)));
+                resultGraphMaps.add(vnfService.placementGraph(traffics, (Permutation) solution.getVariable(0)));
             }
-           // logger.info(resultGraphMaps);
-*/
+            logger.info(resultGraphMaps);
     }
 
 
@@ -147,6 +150,24 @@ public class MaOEAService {
                 TimeUnit.MILLISECONDS.toSeconds(millis) -
                         TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(millis)));
     }
+
+
+    public void example() throws Exception {
+        VnfService vnfService = new VnfService();
+
+        Configurations.loadProperties();
+        DataService.loadData();
+
+        List<Traffic> traffics = TrafficService.readTraffics();
+
+        Permutation permutation = new Permutation(Configurations.numberTraffic);
+        permutation.randomize();
+        SolutionTraffic solutions = vnfService.placement(traffics, permutation);
+
+    }
+
+
+
 }
 
 
