@@ -162,8 +162,9 @@ public class MaOEAService {
 
         Permutation permutation = new Permutation(Configurations.numberTraffic);
         permutation.randomize();
-        SolutionTraffic solutions = vnfService.placement(traffics, permutation);
+        ResultGraphMap solutions = vnfService.placementGraph(traffics, permutation);
 
+        logger.info(solutions);
     }
 
 

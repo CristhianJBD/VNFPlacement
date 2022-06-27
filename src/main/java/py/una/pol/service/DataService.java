@@ -189,7 +189,8 @@ public class DataService {
                 node = new Node();
                 node.setId(splitNode[0].trim());
                 node.setEnergyCost(Double.parseDouble(splitNode[1].trim()));
-                node.setServer(servers.get(splitNode[2].trim()));
+                if(splitNode.length == 3)
+                    node.setServer(servers.get(splitNode[2].trim()));
 
                 logger.info(i++ + " " + node.toString());
                 nodesMap.put(node.getId(), node);

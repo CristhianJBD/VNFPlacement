@@ -82,7 +82,6 @@ public class VnfService {
                 traffic.setRejectLink(0);
                 traffic.setRejectNode(0);
                 graphMultiStage = createGraphtMultiStage(traffic);
-                this.graphToImage(graphMultiStage);
                 if (graphMultiStage == null) {
                     traffic.setRejectNode(1);
                     traffic.setProcessed(false);

@@ -1,5 +1,7 @@
 #[Nodo(Id)] [Costo de Energia(Dolar por Watt) - cite 188-4] [Servidor que corresponde al nodo(Id)]
-node1 0.00011 server1
-node2 0.00014 server2
+node1 0.00013
+node2 0.00014
 node3 0.00019 server3
 node4 0.00010 server4
+node5 0.00011 server5
+node6 0.00014 server6
