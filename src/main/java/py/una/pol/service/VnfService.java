@@ -71,6 +71,7 @@ public class VnfService {
 
     public void solution(List<Traffic> traffics, Permutation permutation) {
         ResultPath resultPath;
+        List<ResultPath> resultPathList = new ArrayList<>();
         Traffic traffic;
         try {
             shortestPathMap = DataService.shortestPathMap;
@@ -94,12 +95,14 @@ public class VnfService {
                         traffic.setProcessed(false);
                         //      logger.warn(count + "- No Solucion: " + "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
                     } else {
+                        resultPathList.add(resultPath);
                         traffic.setProcessed(true);
                         //    logger.info(count + "- Solucion: " + "origen: " + traffic.getNodeOriginId() + ", destino: " + traffic.getNodeDestinyId());
                     }
                 }
                 count++;
             }
+            logger.info(resultPathList);
         } catch (Exception e) {
             logger.error("Error VNF placement: " + e.getMessage());
         }
