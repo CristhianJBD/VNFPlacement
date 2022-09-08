@@ -52,6 +52,7 @@ public class VnfService {
 
     public ResultGraphMap placementGraph(List<Traffic> traffics, Permutation permutation) {
         ResultGraphMap resultGraphMap = new ResultGraphMap();
+        ObjectiveFunctionService ofs = new ObjectiveFunctionService();
         try {
             nodesMap = loadNodesMapAux(DataService.nodesMap);
             linksMap = loadLinkMapAux(DataService.linksMap);
@@ -61,6 +62,10 @@ public class VnfService {
 
             resultGraphMap.setNodesMap(nodesMap);
             resultGraphMap.setLinksMap(linksMap);
+
+            SolutionTraffic solutionTraffic = ofs.solutionTrafficFOs(resultGraphMap.getNodesMap(), resultGraphMap.getLinksMap(), traffics, DataService.vnfsShared);
+
+            logger.info(solutionTraffic);
 
             return resultGraphMap;
         } catch (Exception e) {
@@ -78,8 +83,9 @@ public class VnfService {
             vnfSharedMap = DataService.vnfsShared;
 
             int count = 1;
+            Integer[] vector = {0, 1, 2};
             for (int i = 0; i < permutation.size(); i++) {
-                traffic = traffics.get(permutation.get(i));
+                traffic = traffics.get(vector[i]);
                 traffic.setRejectLink(0);
                 traffic.setRejectNode(0);
                 graphMultiStage = createGraphtMultiStage(traffic);
