@@ -165,6 +165,13 @@ public class MaOEAService {
         ResultGraphMap solutions = vnfService.placementGraph(traffics, permutation);
 
         logger.info(solutions);
+
+        ObjectiveFunctionService ofs = new ObjectiveFunctionService();
+
+        SolutionTraffic solutionTraffic = ofs.solutionTrafficFOs(solutions.getNodesMap(), solutions.getLinksMap(), traffics, DataService.vnfsShared);
+
+        logger.info(solutionTraffic);
+
     }
 
 
