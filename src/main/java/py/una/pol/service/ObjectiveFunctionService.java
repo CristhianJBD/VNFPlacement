@@ -189,7 +189,7 @@ public class ObjectiveFunctionService {
         try {
             for (Server server : servers) {
                 //Suma del costo de licencia de cada servidor
-                licencesCost = server.getLicenceCost();
+                licencesCost = licencesCost + server.getLicenceCost();
                 for (List<VnfShared> vnfsShared : server.getVnfs().values())
                     //Suma del costo de licencia de cada VNF
                     for(VnfShared vnfShared : vnfsShared)
@@ -249,8 +249,8 @@ public class ObjectiveFunctionService {
 
             //Costo de multa por el ancho banda que sobra de la capacidad total de cada enlace
             for (Link link : links)
-                fragmentation = fragmentation +
-                        (link.getBandwidth() - link.getBandwidthUsed()) * Configurations.linkPenaltyBandwidthCost;
+                if(link.getBandwidthUsed() != 0)
+                    fragmentation = fragmentation + (link.getBandwidth() - link.getBandwidthUsed()) * Configurations.linkPenaltyBandwidthCost;
 
             return fragmentation;
         } catch (Exception e) {
@@ -321,7 +321,7 @@ public class ObjectiveFunctionService {
                 if(traffic.isProcessed()) {
                     List<Vnf> sfc = traffic.getSfc().getVnfs();
                     bandwidth = traffic.getBandwidth();
-                    for (int i = 0; i < sfc.size(); i++) {
+                    for (int i = 0; i < sfc.size() - 1; i++) {
                         delay=0;
                         for(String linkId: traffic.getResultPath().getPaths().get(i + 1).getShortestPath().getLinks())
                             delay = delay + linksMap.get(linkId).getDelay();
