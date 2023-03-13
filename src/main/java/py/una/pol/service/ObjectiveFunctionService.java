@@ -236,15 +236,23 @@ public class ObjectiveFunctionService {
         try {
             //Costo de multa de cada recurso por el recurso que sobra de la capacidad total de cada Servidor
             for (Server server : servers) {
-                fragmentation = fragmentation +
-                        (server.getResourceCPU() - server.getResourceCPUUsed()) *
-                                Configurations.serverPenaltyCPUCost;
-                fragmentation = fragmentation +
-                        (server.getResourceRAM() - server.getResourceRAMUsed()) *
-                                Configurations.serverPenaltyRAMCost;
-                fragmentation = fragmentation +
-                        (server.getResourceStorage() - server.getResourceStorageUsed()) *
-                                Configurations.serverPenaltyStorageCost;
+                if(server.getResourceCPUUsed() != 0) {
+                    fragmentation = fragmentation +
+                            (server.getResourceCPU() - server.getResourceCPUUsed()) *
+                                    Configurations.serverPenaltyCPUCost;
+                }
+
+                if(server.getResourceRAMUsed() != 0) {
+                    fragmentation = fragmentation +
+                            (server.getResourceRAM() - server.getResourceRAMUsed()) *
+                                    Configurations.serverPenaltyRAMCost;
+                }
+
+                if(server.getResourceStorageUsed() != 0) {
+                    fragmentation = fragmentation +
+                            (server.getResourceStorage() - server.getResourceStorageUsed()) *
+                                    Configurations.serverPenaltyStorageCost;
+                }
             }
 
             //Costo de multa por el ancho banda que sobra de la capacidad total de cada enlace
